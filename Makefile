@@ -9,7 +9,7 @@ clean:
 	rm -f *.o
 	rm -f ${PNAME}
 install:
-	cp ${PNAME} /usr/bin
+	cp ${PNAME} /usr/bin/
 uninstall:
 	rm /usr/bin/${PNAME}
 remake:
