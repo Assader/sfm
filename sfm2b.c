@@ -176,6 +176,8 @@ void draw(part p, int mx){
             wprintw(p.w.win, "/");
         if (((tset.st_mode|S_IXUSR)==tset.st_mode)&&(!S_ISDIR(tset.st_mode)))
             wprintw(p.w.win, "*");
+        if (S_ISLNK(tset.st_mode))
+            wprintw(p.w.win, "->");
         wmove(p.w.win, ++tY, 1);
     }
 }
@@ -382,6 +384,8 @@ void gInfo(part *p, wnd *w){
     int tY=1;
     char tmp[1024];
     struct stat tset;
+    short int octarray[9] = {0400, 0200, 0100, 0040, 0020, 0010, 0004, 0002, 0001};
+    const char rs[]="rwx";
 
     wclear(w->win);
     box(w->win, 0, 0);
@@ -390,7 +394,15 @@ void gInfo(part *p, wnd *w){
     stat(tmp, &tset);
     mvwprintw(w->win, tY++, 1, "Name: %s", p->f.files[p->w.currentLine]->d_name);
     mvwprintw(w->win, tY++, 1, "Size: %dB", tset.st_size);
-    mvwprintw(w->win, tY++, 1, "Access mode: %d", tset.st_mode);
+    mvwprintw(w->win, tY++, 1, "Access mode: ");
+    for (tY=0;tY<9;tY++){
+        if (tset.st_mode & octarray[tY])
+            wprintw(w->win, "%c", rs[tY%3]);
+        else
+            wprintw(w->win, "-");
+        ((tY+1)%3==0) ? wprintw(w->win, " ") : 0;
+    }
+    move(23, 0);
     wrefresh(w->win);
     getch();
 }
