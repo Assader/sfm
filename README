@@ -1,0 +1,31 @@
+q     - quit                                                    (Y)
+m     - move file                                               (Y)
+M     - make folder                                             (Y)
+C     - copy file                                               (Y)
+c     - change folder (cd)                                      (Y)
+s     - open in another window same folder                      (Y)
+h     - show/hide hidden files                                  (Y)
+r     - remove file                                             (Y)
+R     - rename item                                             (Y)
+f     - filter                                                  (F)
+x     - execute                                                 (Y)
+X     - execute in new terminal                                 (Y)
+enter - open folder/open file (if specified text editor)        (Y)
+u     - parent folder                                           (Y)
+a     - select another window                                   (Y)
+g     - go to entered line                                      (Y)
+i     - info about item                                         (N)
+k     - console                                                 (N)
+end   - go to last item                                         (Y)
+home  - go to first item                                        (Y)
+F5    - reload folder                                           (Y)
+F6    - reload resources                                        (Y)
+
+Also u can type "sfm /path/to/smth".                            (Y)
+Save/load setings from .conf                                    (Y)
+Runtime resize                                                  (Y)
+
+Y - yes
+N - no
+W - developing
+F - in next version (>=0.02c)
