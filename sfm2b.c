@@ -58,6 +58,28 @@ void fillList(part *p){
     p->f.numbOfLines = scandir(p->f.path, &p->f.files, (p->f.hid)?0:slt, alphasort);
 }
 
+void setKeys(FILE *f, const char **cnf){
+    char tmp[1024];
+    int sch, ssch=0;
+
+    echo();
+    clear();
+    printw("Enter name of your text editor: ");
+    scanw("%[^\n]", tmp);
+    fprintf(f, "[Global]\nText editor = %s ;\n", tmp);
+    clear();
+    printw("Enter name of your terminal emulator\nwith flags to execute: ");
+    scanw("%[^\n]", tmp);
+    fprintf(f, "Terminal emulator = %s ;\n[Binds]\n", tmp);
+    noecho();
+    while (ssch<15){
+        clear();
+        printw("Enter symbol to action \"%s\": ", cnf[ssch]);
+        sch=getch();
+        fprintf(f, "%s = %c ;\n", cnf[ssch++], sch);
+    }
+}
+
 void readConf(part *p, part *pp, char *td, char *term, int keys[]){
     char tmp[128], ttmp[8];
     const char *cnf[] = {"Another window", "Quit", "Hidden mode", "Same folder", "Change folder", "New folder", "Copy", "Move", "Remove", "Rename", "Parent folder", "Go to line", "Execute", "Info", "Execute command"};
@@ -90,25 +112,8 @@ void readConf(part *p, part *pp, char *td, char *term, int keys[]){
             fprintf(f,"[Global]\nText editor = gedit ;\nTerminal emulator = xterm ;\n");
             fprintf(f,"[Binds]\nAnother window = a ;\nQuit = q ;\nHidden mode = h ;\nSame folder = s ;\nChange folder = c ;\nNew folder = M ;\nCopy = C ;\nMove = m ;\nRemove = r ;\nRename = R ;\nParent folder = u '\nGo to line = g ;\nExecute = X ;\nInfo = i ;\nExecute command = k ;\n");
         }
-        else{
-            echo();
-            clear();
-            printw("Enter name of your text editor: ");
-            scanw("%[^\n]", tmp);
-            fprintf(f, "[Global]\nText editor = %s ;\n", tmp);
-            clear();
-            printw("Enter name of your terminal emulator\nwith flags to execute: ");
-            scanw("%[^\n]", tmp);
-            noecho();
-            fprintf(f, "Terminal emulator = %s ;\n[Binds]\n", tmp);
-            while (ssch<15){
-                clear();
-                printw("Enter symbol to action \"%s\": ", cnf[ssch]);
-                sch=getch();
-                fprintf(f, "%s = %c ;\n", cnf[ssch++], sch);
-            }
-
-        }
+        else
+            setKeys(f, cnf);
         fclose(f);
         clear();
         printw("Config saved to ~/.config/sfm/sfm.conf\nPress enter");
@@ -202,19 +207,21 @@ void kEnter(part *p, char *td){
     char tmp[4096], ttmp[4096];
     struct stat tset;
 
-    strcpy(tmp, p->f.path);
-    strcat(tmp, p->f.files[p->w.currentLine]->d_name);
-    stat(tmp, &tset);
-    if (S_ISDIR(tset.st_mode)){
-        strcat(p->f.path, p->f.files[p->w.currentLine]->d_name);
-        strcat(p->f.path, "/");
-    }
-    if ((S_ISREG(tset.st_mode))&&((tset.st_mode|S_IXUSR)!=tset.st_mode)){
-        strcpy(ttmp, td);
-        strcat(ttmp, " ");
-        strcat(ttmp, tmp);
-        strcat(ttmp, " >/dev/null &");
-        system(ttmp);
+    if (p->f.numbOfLines){
+        strcpy(tmp, p->f.path);
+        strcat(tmp, p->f.files[p->w.currentLine]->d_name);
+        stat(tmp, &tset);
+        if (S_ISDIR(tset.st_mode)){
+            strcat(p->f.path, p->f.files[p->w.currentLine]->d_name);
+            strcat(p->f.path, "/");
+        }
+        if ((S_ISREG(tset.st_mode))&&((tset.st_mode|S_IXUSR)!=tset.st_mode)){
+            strcpy(ttmp, td);
+            strcat(ttmp, " ");
+            strcat(ttmp, tmp);
+            strcat(ttmp, " >/dev/null &");
+            system(ttmp);
+        }
     }
 }
 
@@ -400,15 +407,15 @@ void kEnd(part *p, int mx){
 
 void nfo(part *p, int mx){
     int sch;
+    char *rd;
 
     mvwchgat(p->w.win, p->w.currentLine-p->w.top+1, 1, mx/2-2, A_REVERSE, 0, NULL);
     if (strlen(p->f.path)<(mx-15))
         mvprintw(0, 0, "%s", p->f.path);
     else{
-        sch=strlen(p->f.path)-mx+17;
+        rd=&p->f.path[strlen(p->f.path)-mx+17];
         mvprintw(0, 0, "..");
-        while (sch<strlen(p->f.path))
-            printw("%c", p->f.path[sch++]);
+        printw("%s", rd);
     }
     mvprintw(0, mx-15, "|%d/%d", p->w.currentLine+1, p->f.numbOfLines);
 }
