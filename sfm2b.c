@@ -29,6 +29,7 @@
 #include <ncurses.h>
 #include <dirent.h>
 #include <sys/stat.h>
+#include <locale.h>
 #include "iniparser/src/iniparser.c"
 #include "iniparser/src/dictionary.c"
 
@@ -70,7 +71,8 @@ void setKeys(FILE *f, const char **cnf){
     clear();
     printw("Enter name of your terminal emulator\nwith flags to execute: ");
     scanw("%[^\n]", tmp);
-    fprintf(f, "Terminal emulator = %s ;\n[Binds]\n", tmp);
+    fprintf(f, "Terminal emulator = %s ;\n", tmp);
+    fprintf(f, "Locale = %s ;\n[Binds]\n", getenv("LANG"));
     noecho();
     while (ssch<15){
         clear();
@@ -80,7 +82,7 @@ void setKeys(FILE *f, const char **cnf){
     }
 }
 
-void readConf(part *p, part *pp, char *td, char *term, int keys[]){
+void readConf(part *p, part *pp, char *td, char *term, int keys[], char *lc){
     char tmp[128], ttmp[8];
     const char *cnf[] = {"Another window", "Quit", "Hidden mode", "Same folder", "Change folder", "New folder", "Copy", "Move", "Remove", "Rename", "Parent folder", "Go to line", "Execute", "Info", "Execute command"};
     int sch=0, ssch=0;
@@ -96,10 +98,10 @@ void readConf(part *p, part *pp, char *td, char *term, int keys[]){
     }
     fclose(f);
     ini = iniparser_load(tmp);
-    strcpy(p->f.path, iniparser_getstring(ini, "main:lpath", NULL));
-    strcpy(pp->f.path, iniparser_getstring(ini, "main:rpath", NULL));
-    p->f.hid = iniparser_getint(ini, "main:lhid", -1);
-    pp->f.hid = iniparser_getint(ini, "main:rhid", -1);
+    strcpy(p->f.path, iniparser_getstring(ini, "main:lpath", "/"));
+    strcpy(pp->f.path, iniparser_getstring(ini, "main:rpath", "/"));
+    p->f.hid = iniparser_getint(ini, "main:lhid", 0);
+    pp->f.hid = iniparser_getint(ini, "main:rhid", 0);
     iniparser_freedict(ini);
     strcpy(tmp, getenv("HOME"));
     strcat(tmp, "/.config/sfm/sfm.conf");
@@ -109,8 +111,8 @@ void readConf(part *p, part *pp, char *td, char *term, int keys[]){
         sch=getch();
         f=fopen(tmp, "w");
         if (sch=='d'){
-            fprintf(f,"[Global]\nText editor = gedit ;\nTerminal emulator = xterm ;\n");
-            fprintf(f,"[Binds]\nAnother window = a ;\nQuit = q ;\nHidden mode = h ;\nSame folder = s ;\nChange folder = c ;\nNew folder = M ;\nCopy = C ;\nMove = m ;\nRemove = r ;\nRename = R ;\nParent folder = u '\nGo to line = g ;\nExecute = X ;\nInfo = i ;\nExecute command = k ;\n");
+            fprintf(f,"[Global]\nText editor = gedit ;\nTerminal emulator = xterm ;\nLocale = en_US.UTF-8 ;\n");
+            fprintf(f,"[Binds]\nAnother window = a ;\nQuit = q ;\nHidden mode = h ;\nSame folder = s ;\nChange folder = c ;\nNew folder = M ;\nCopy = C ;\nMove = m ;\nRemove = r ;\nRename = R ;\nParent folder = u ;\nGo to line = g ;\nExecute = X ;\nInfo = i ;\nExecute command = k ;\n");
         }
         else
             setKeys(f, cnf);
@@ -118,14 +120,13 @@ void readConf(part *p, part *pp, char *td, char *term, int keys[]){
         clear();
         printw("Config saved to ~/.config/sfm/sfm.conf\nPress enter");
         getch();
-        strcpy(tmp, getenv("HOME"));
-        strcat(tmp, "/.config/sfm/sfm.conf");
         sch=0;
     }
     ini = iniparser_load(tmp);
-    strcpy(td, iniparser_getstring(ini, "global:text editor", NULL));
-    strcpy(term, iniparser_getstring(ini, "global:terminal emulator", NULL));
-    strcpy(ttmp, iniparser_getstring(ini, "binds:another window", NULL));
+    strcpy(td, iniparser_getstring(ini, "global:text editor", "gedit"));
+    strcpy(term, iniparser_getstring(ini, "global:terminal emulator", "xterm"));
+    strcpy(lc, iniparser_getstring(ini, "global:locale", "en_US.UTF-8"));
+    strcpy(ttmp, iniparser_getstring(ini, "binds:another window", "a"));
     if (ttmp[0]=='\0')
         keys[sch++]=9;
     else
@@ -174,9 +175,9 @@ void draw(part p, int mx){
         stat(tmp, &tset);
         if (S_ISDIR(tset.st_mode))
             wprintw(p.w.win, "/");
-        if (((tset.st_mode|S_IXUSR)==tset.st_mode)&&(!S_ISDIR(tset.st_mode)))
+        if ((tset.st_mode & S_IXUSR)&&(!S_ISDIR(tset.st_mode)))
             wprintw(p.w.win, "*");
-        if (S_ISLNK(tset.st_mode))
+        if (S_ISLNK(tset.st_mode))      //FIXME: try with S_IFLNK
             wprintw(p.w.win, "->");
         wmove(p.w.win, ++tY, 1);
     }
@@ -217,7 +218,7 @@ void kEnter(part *p, char *td){
             strcat(p->f.path, p->f.files[p->w.currentLine]->d_name);
             strcat(p->f.path, "/");
         }
-        if ((S_ISREG(tset.st_mode))&&((tset.st_mode|S_IXUSR)!=tset.st_mode)){
+        if ((S_ISREG(tset.st_mode))&&(!(tset.st_mode & S_IXUSR))){
             strcpy(ttmp, td);
             strcat(ttmp, " ");
             strcat(ttmp, tmp);
@@ -360,7 +361,7 @@ void exec(part *p, char *term, int nw){
     strcpy(tmp, p->f.path);
     strcat(tmp, p->f.files[p->w.currentLine]->d_name);
     stat(tmp, &tset);
-    if ((tset.st_mode|S_IXUSR)==tset.st_mode){
+    if (tset.st_mode & S_IXUSR){
         if (nw){
             strcpy(ttmp, term);
             strcat(ttmp, " ");
@@ -435,16 +436,20 @@ void nfo(part *p, int mx){
 int main(int argc, char *argv[]){
     int mRow=0, mCol=0, lOrR=0, cmd, inCy=1, keys[15];         //lOrR = left ot right (selected)
     part lPart, rPart, *tmpCPt, *tmpAPt;
-    char tmp[32], TEd[32], term[64];
+    char tmp[32], TEd[32], term[64], lc[32];
     lPart.w.currentLine=0; rPart.w.currentLine=0;
     lPart.w.top=0; rPart.w.top=0;
 
+    readConf(&lPart, &rPart, TEd, term, keys, lc);
+    if (argc == 2)
+        strcpy(lPart.f.path, argv[1]);
+    if (!setlocale(LC_CTYPE, lc)){
+      printw("Can't set the locale!\nSome filenames can display wrong.\nCheck ~/.config/sfm/sfm.conf");
+      getch();
+    }
     initscr();
     noecho();
     keypad(stdscr, true);
-    readConf(&lPart, &rPart, TEd, term, keys);
-    if (argc == 2)
-        strcpy(lPart.f.path, argv[1]);
     fillList(&lPart);
     fillList(&rPart);
     while (inCy){
@@ -533,7 +538,7 @@ int main(int argc, char *argv[]){
             }
         else if (cmd==KEY_F(6)){
             saveConf(&lPart, &rPart);
-            readConf(&lPart, &rPart, TEd, term, keys);
+            readConf(&lPart, &rPart, TEd, term, keys, lc);
             }
         else if (cmd==KEY_HOME)
             kHome(&tmpCPt->w);
