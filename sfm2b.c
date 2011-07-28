@@ -59,6 +59,11 @@ void fillList(part *p){
     p->f.numbOfLines = scandir(p->f.path, &p->f.files, (p->f.hid)?0:slt, alphasort);
 }
 
+void execInBkg(char *tmp){
+    strcat(tmp, " > /dev/null 2> /dev/null &");
+    system(tmp);
+}
+
 void setKeys(FILE *f, const char **cnf){
     char tmp[1024];
     int sch, ssch=0;
@@ -153,23 +158,24 @@ void saveConf(part *p, part *pp){
     fclose(f);
 }
 
-void setTop(wnd *w, int mx, int dd){
+void setTop(wnd *w, int mRow, int dd){
     if (dd)
         w->currentLine=0;
-    if (w->currentLine>mx-4)
-        w->top=w->currentLine-(mx-5);
+    if (w->currentLine>mRow-4)
+        w->top=w->currentLine-(mRow-5);
     else
         w->top=0;
 }
 
-void draw(part p, int mx){
+void draw(part p, int mRow, int mCol){
     int tY=1;
     struct stat tset;
-    char tmp[4096];
+    char tmp[4096], fStr[64];
 
+    sprintf(fStr, "%%.%ds", mCol/2-3);
     wmove(p.w.win, 1, 1);
-    while ((tY<mx-3)&&(tY-1<p.f.numbOfLines)){
-        wprintw(p.w.win, "%s", p.f.files[p.w.top + tY-1]->d_name);
+    while ((tY<mRow-3)&&(tY-1<p.f.numbOfLines)){
+        wprintw(p.w.win, fStr, p.f.files[p.w.top + tY-1]->d_name);
         strcpy(tmp, p.f.path);
         strcat(tmp, p.f.files[p.w.top + tY-1]->d_name);
         stat(tmp, &tset);
@@ -183,12 +189,12 @@ void draw(part p, int mx){
     }
 }
 
-void kUp(wnd *w, int mx, int ml){
+void kUp(wnd *w, int nmbOfLines, int mRow){
     --w->currentLine;
     if (w->currentLine<0){
-        w->currentLine=mx-1;
-        if (mx>ml-4)
-            w->top=w->currentLine-(ml-5);
+        w->currentLine=nmbOfLines-1;
+        if (nmbOfLines>mRow-4)
+            w->top=w->currentLine-(mRow-5);
         else
             w->top=0;
     }
@@ -196,17 +202,17 @@ void kUp(wnd *w, int mx, int ml){
         --w->top;
 }
 
-void kDown(wnd *w, int mx, int ml){
+void kDown(wnd *w, int nmbOfLines, int mRow){
     ++w->currentLine;
-    if (w->currentLine>mx-1){
+    if (w->currentLine>nmbOfLines-1){
         w->currentLine=0;
         w->top=0;
     }
-    if (w->currentLine>w->top+(ml-5))
+    if (w->currentLine>w->top+(mRow-5))
         ++w->top;
 }
 
-void kEnter(part *p, char *td){
+void kEnter(part *p, char *td, char *term, int mRow){
     char tmp[4096], ttmp[4096];
     struct stat tset;
 
@@ -217,13 +223,20 @@ void kEnter(part *p, char *td){
         if (S_ISDIR(tset.st_mode)){
             strcat(p->f.path, p->f.files[p->w.currentLine]->d_name);
             strcat(p->f.path, "/");
+            fillList(p);
+            setTop(&p->w, mRow, 1);
         }
-        if ((S_ISREG(tset.st_mode))&&(!(tset.st_mode & S_IXUSR))){
+        else if ((S_ISREG(tset.st_mode))&&(!(tset.st_mode & S_IXUSR))){
             strcpy(ttmp, td);
             strcat(ttmp, " ");
             strcat(ttmp, tmp);
-            strcat(ttmp, " >/dev/null &");
-            system(ttmp);
+            execInBkg(ttmp);
+        }
+        else if (tset.st_mode & S_IXUSR){
+            strcpy(ttmp, term);
+            strcat(ttmp, " ");
+            strcat(ttmp, tmp);
+            execInBkg(ttmp);
         }
     }
 }
@@ -241,26 +254,26 @@ void kPFld(fl *f){
 void dAsk(char *i, char *o){
     echo();
     printw("%s: ", i);
-    scanw("%s", o);
+    scanw("%[^\n]", o);
     noecho();
 }
 
-void reSize(wnd *w, wnd *w1, int *mc, int *ml){
+void reSize(wnd *w, wnd *w1, int *mRow, int *mCol){
     int tmX, tmY;
 
     getmaxyx(stdscr, tmY, tmX);
-    if ((*mc!=tmY)||(*ml!=tmX)){
+    if ((*mRow!=tmY)||(*mCol!=tmX)){
         delwin(w->win);
         delwin(w1->win);
         wclear(stdscr);
         w->win = newwin(tmY-2, tmX/2, 1, 0);
         w1->win = newwin(tmY-2, tmX/2, 1, tmX/2);
-        (*mc)=tmY;
-        (*ml)=tmX;
+        (*mRow)=tmY;
+        (*mCol)=tmX;
     }
 }
 
-void goToLine(part *p, int mx){
+void goToLine(part *p, int mRow){
     echo();
     printw("New position: ");
     scanw("%d", &p->w.currentLine);
@@ -269,7 +282,7 @@ void goToLine(part *p, int mx){
         p->w.top=0;
         p->w.currentLine=0;
     }
-    setTop(&p->w, mx, 0);
+    setTop(&p->w, mRow, 0);
 }
 
 void chDir(fl *f){
@@ -354,34 +367,20 @@ void renItem(part *p){
     system(ttmp);
 }
 
-void exec(part *p, char *term, int nw){
-    char tmp[1024], ttmp[1024];
-
-    struct stat tset;
-    strcpy(tmp, p->f.path);
-    strcat(tmp, p->f.files[p->w.currentLine]->d_name);
-    stat(tmp, &tset);
-    if (tset.st_mode & S_IXUSR){
-        if (nw){
-            strcpy(ttmp, term);
-            strcat(ttmp, " ");
-            strcat(ttmp, tmp);
-        }
-        else
-            strcpy(ttmp, tmp);
-        system(strcat(ttmp, " > /dev/null &"));
-    }
-}
-
-void cmdKey(void){
+void cmdKey(part *p){
     char tmp[1024];
 
     dAsk("Command", tmp);
-    strcat(tmp, " &");
-    system(tmp);
+    if (p){
+        strcat(tmp, "\"");
+        strcat(tmp, p->f.path);
+        strcat(tmp, p->f.files[p->w.currentLine]->d_name);
+        strcat(tmp, "\"");
+    }
+    execInBkg(tmp);
 }
 
-void gInfo(part *p, wnd *w){
+void gInfo(part *p, wnd *w, int mCol){
     int tY=1;
     char tmp[1024];
     struct stat tset;
@@ -393,7 +392,8 @@ void gInfo(part *p, wnd *w){
     strcpy(tmp, p->f.path);
     strcat(tmp, p->f.files[p->w.currentLine]->d_name);
     stat(tmp, &tset);
-    mvwprintw(w->win, tY++, 1, "Name: %s", p->f.files[p->w.currentLine]->d_name);
+    mvwprintw(w->win, tY, 1, "Name: %s", p->f.files[p->w.currentLine]->d_name);
+    tY += strlen(p->f.files[p->w.currentLine]->d_name)/(mCol/2) + 1;
     mvwprintw(w->win, tY++, 1, "Size: %dB", tset.st_size);
     mvwprintw(w->win, tY++, 1, "Access mode: ");
     for (tY=0;tY<9;tY++){
@@ -413,27 +413,27 @@ void kHome(wnd *w){
     w->top=0;
 }
 
-void kEnd(part *p, int mx){
+void kEnd(part *p, int mRow){
     p->w.currentLine = p->f.numbOfLines-1;
-    setTop(&p->w, mx, 0);
+    setTop(&p->w, mRow, 0);
 }
 
-void nfo(part *p, int mx){
+void nfo(part *p, int mCol){
     int sch;
     char *rd;
 
-    mvwchgat(p->w.win, p->w.currentLine-p->w.top+1, 1, mx/2-2, A_REVERSE, 0, NULL);
-    if (strlen(p->f.path)<(mx-15))
+    mvwchgat(p->w.win, p->w.currentLine-p->w.top+1, 1, mCol/2-2, A_REVERSE, 0, NULL);
+    if (strlen(p->f.path)<(mCol-15))
         mvprintw(0, 0, "%s", p->f.path);
     else{
-        rd=&p->f.path[strlen(p->f.path)-mx+17];
+        rd=&p->f.path[strlen(p->f.path)-mCol+17];
         mvprintw(0, 0, "..");
         printw("%s", rd);
     }
-    mvprintw(0, mx-15, "|%d/%d", p->w.currentLine+1, p->f.numbOfLines);
+    mvprintw(0, mCol-15, "|%d/%d", p->w.currentLine+1, p->f.numbOfLines);
 }
 
-int main(int argc, char *argv[]){
+int main(int argc, char **argv){
     int mRow=0, mCol=0, lOrR=0, cmd, inCy=1, keys[15];         //lOrR = left ot right (selected)
     part lPart, rPart, *tmpCPt, *tmpAPt;
     char tmp[32], TEd[32], term[64], lc[32];
@@ -443,8 +443,8 @@ int main(int argc, char *argv[]){
     readConf(&lPart, &rPart, TEd, term, keys, lc);
     if (argc == 2)
         strcpy(lPart.f.path, argv[1]);
-    if (!setlocale(LC_CTYPE, lc)){
-      printw("Can't set the locale!\nSome filenames can display wrong.\nCheck ~/.config/sfm/sfm.conf");
+    if (!setlocale(LC_ALL, lc)){
+      printf("Can't set the locale!\nSome filenames can display wrong.\nCheck ~/.config/sfm/sfm.conf");
       getch();
     }
     initscr();
@@ -464,8 +464,8 @@ int main(int argc, char *argv[]){
             mvprintw(0, mCol-1, "%c", cmd);
         tmpCPt = lOrR ? &rPart : &lPart;
         tmpAPt = lOrR ? &lPart : &rPart;
-        draw(lPart, mRow);
-        draw(rPart, mRow);
+        draw(lPart, mRow, mCol);
+        draw(rPart, mRow, mCol);
         nfo(tmpCPt, mCol);
         refresh();
         wrefresh(lPart.w.win);
@@ -476,11 +476,8 @@ int main(int argc, char *argv[]){
             kUp(&tmpCPt->w, tmpCPt->f.numbOfLines, mRow);
         else if (cmd==KEY_DOWN)
             kDown(&tmpCPt->w, tmpCPt->f.numbOfLines, mRow);
-        else if ((cmd==KEY_ENTER)||(cmd=='\n')){
-            kEnter(tmpCPt, TEd);
-            fillList(tmpCPt);
-            setTop(&tmpCPt->w, mRow, 1);
-            }
+        else if ((cmd==KEY_ENTER)||(cmd=='\n'))
+            kEnter(tmpCPt, TEd, term, mRow);
         else if (cmd==keys[0])
             lOrR = !lOrR;
         else if (cmd==keys[1]){
@@ -525,11 +522,11 @@ int main(int argc, char *argv[]){
         else if (cmd==keys[11])
             goToLine(tmpCPt, mRow);
         else if (cmd==keys[12])
-            exec(tmpCPt, term, 1);
+            cmdKey(tmpCPt);
         else if (cmd==keys[13])
-            gInfo(tmpCPt, &tmpAPt->w);
+            gInfo(tmpCPt, &tmpAPt->w, mCol);
         else if (cmd==keys[14])
-            cmdKey();
+            cmdKey(NULL);
         else if (cmd==KEY_F(5)){
             fillList(&lPart);
             fillList(&rPart);
