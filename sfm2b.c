@@ -40,7 +40,7 @@ typedef struct{
     } wnd;
 
 typedef struct{
-        char path[4096];
+        char *path;
         struct dirent **files;
         int numbOfLines;
         int hid;
@@ -56,6 +56,10 @@ int slt(const struct dirent *d){
 }
 
 void fillList(part *p){
+    int sch=0;
+
+    while (sch<p->f.numbOfLines)
+        free(p->f.files[sch++]);
     p->f.numbOfLines = scandir(p->f.path, &p->f.files, (p->f.hid)?0:slt, alphasort);
 }
 
@@ -65,7 +69,7 @@ void execInBkg(char *tmp){
 }
 
 void setKeys(FILE *f, const char **cnf){
-    char tmp[1024];
+    char *tmp = (char *) malloc(sizeof(char)*4096);
     int sch, ssch=0;
 
     echo();
@@ -85,10 +89,11 @@ void setKeys(FILE *f, const char **cnf){
         sch=getch();
         fprintf(f, "%s = %c ;\n", cnf[ssch++], sch);
     }
+    free(tmp);
 }
 
 void readConf(part *p, part *pp, char *td, char *term, int keys[], char *lc){
-    char tmp[128], ttmp[8];
+    char *tmp = (char *) malloc(sizeof(char)*128), *ttmp = (char *) malloc(sizeof(char)*4);
     const char *cnf[] = {"Another window", "Quit", "Hidden mode", "Same folder", "Change folder", "New folder", "Copy", "Move", "Remove", "Rename", "Parent folder", "Go to line", "Execute", "Info", "Execute command"};
     int sch=0, ssch=0;
     dictionary *ini;
@@ -143,10 +148,12 @@ void readConf(part *p, part *pp, char *td, char *term, int keys[], char *lc){
         keys[sch++]=ttmp[0];
     }
     iniparser_freedict(ini);
+    free(tmp);
+    free(ttmp);
 }
 
 void saveConf(part *p, part *pp){
-    char tmp[128];
+    char *tmp = (char *) malloc(sizeof(char)*128);
 
     strcpy(tmp, getenv("HOME"));
     strcat(tmp, "/.config/sfm/tmp");
@@ -156,6 +163,7 @@ void saveConf(part *p, part *pp){
     fprintf(f, "lHid = %d ;\n", p->f.hid);
     fprintf(f, "rHid = %d ;\n", pp->f.hid);
     fclose(f);
+    free(tmp);
 }
 
 void setTop(wnd *w, int mRow, int dd){
@@ -170,7 +178,7 @@ void setTop(wnd *w, int mRow, int dd){
 void draw(part p, int mRow, int mCol){
     int tY=1;
     struct stat tset;
-    char tmp[4096], fStr[64];
+    char *tmp = (char *) malloc(sizeof(char)*4096), *fStr = (char *) malloc(sizeof(char)*24);
 
     sprintf(fStr, "%%.%ds", mCol/2-3);
     wmove(p.w.win, 1, 1);
@@ -184,9 +192,11 @@ void draw(part p, int mRow, int mCol){
         if ((tset.st_mode & S_IXUSR)&&(!S_ISDIR(tset.st_mode)))
             wprintw(p.w.win, "*");
         if (S_ISLNK(tset.st_mode))      //FIXME: try with S_IFLNK
-            wprintw(p.w.win, "->");
+            wprintw(p.w.win, ">");
         wmove(p.w.win, ++tY, 1);
     }
+    free(tmp);
+    free(fStr);
 }
 
 void kUp(wnd *w, int nmbOfLines, int mRow){
@@ -213,7 +223,7 @@ void kDown(wnd *w, int nmbOfLines, int mRow){
 }
 
 void kEnter(part *p, char *td, char *term, int mRow){
-    char tmp[4096], ttmp[4096];
+    char *tmp = (char *) malloc(sizeof(char)*4096), *ttmp = (char *) malloc(sizeof(char)*4096);
     struct stat tset;
 
     if (p->f.numbOfLines){
@@ -239,6 +249,8 @@ void kEnter(part *p, char *td, char *term, int mRow){
             execInBkg(ttmp);
         }
     }
+    free(tmp);
+    free(ttmp);
 }
 
 void kPFld(fl *f){
@@ -268,8 +280,8 @@ void reSize(wnd *w, wnd *w1, int *mRow, int *mCol){
         wclear(stdscr);
         w->win = newwin(tmY-2, tmX/2, 1, 0);
         w1->win = newwin(tmY-2, tmX/2, 1, tmX/2);
-        (*mRow)=tmY;
-        (*mCol)=tmX;
+        *mRow=tmY;
+        *mCol=tmX;
     }
 }
 
@@ -286,7 +298,7 @@ void goToLine(part *p, int mRow){
 }
 
 void chDir(fl *f){
-    char tmp[1024];
+    char *tmp = (char *) malloc(sizeof(char)*4096);
 
     dAsk("Name of folder", tmp);
     if (tmp[strlen(tmp)-1]!='/')
@@ -295,10 +307,11 @@ void chDir(fl *f){
         strcpy(f->path, tmp);
     else
         strcat(f->path, tmp);
+    free(tmp);
 }
 
 void newDir(fl *f){
-    char tmp[1024], ttmp[1024];
+    char *tmp = (char *) malloc(sizeof(char)*4096), *ttmp = (char *) malloc(sizeof(char)*4096);
 
     dAsk("Name of new folder", tmp);
     if (tmp[0]=='/'){
@@ -311,64 +324,73 @@ void newDir(fl *f){
         strcat(ttmp, tmp);
         system(ttmp);
     }
+    free(tmp);
+    free(ttmp);
 }
 
 void cpItem(part *p, part *pp){
-    char tmp[1024];
+    char *tmp = (char *) malloc(sizeof(char)*4096);
     struct stat tset;
 
-    strcpy(tmp, "cp ");
+    strcpy(tmp, "cp \"");
     strcat(tmp, p->f.path);
     strcat(tmp, p->f.files[p->w.currentLine]->d_name);
     stat(tmp, &tset);
+    strcat(tmp, "\"");
     if (S_ISDIR(tset.st_mode))
         strcat(tmp, " -r");
-    strcat(tmp, " ");
+    strcat(tmp, " \"");
     strcat(tmp, pp->f.path);
-    strcat(tmp, " &");
+    strcat(tmp, "\" &");
     system(tmp);
+    free(tmp);
 }
 
 void moveItem(part *p, part *pp){
-    char tmp[1024];
+    char *tmp = (char *) malloc(sizeof(char)*4096);
 
-    strcpy(tmp, "mv ");
+    strcpy(tmp, "mv \"");
     strcat(tmp, p->f.path);
     strcat(tmp, p->f.files[p->w.currentLine]->d_name);
-    strcat(tmp, " ");
+    strcat(tmp, "\" \"");
     strcat(tmp, pp->f.path);
-    strcat(tmp, " &");
+    strcat(tmp, "\" &");
     system(tmp);
+    free(tmp);
 }
 
 void rmItem(part *p){
-    char tmp[1024];
+    char *tmp = (char *) malloc(sizeof(char)*4096);
 
     dAsk("Are you SURE?", tmp);
     if (tmp[0]=='y'){
-        strcpy(tmp, "rm -rf ");
+        strcpy(tmp, "rm -rf \"");
         strcat(tmp, p->f.path);
         strcat(tmp, p->f.files[p->w.currentLine]->d_name);
-        strcat(tmp, " &");
+        strcat(tmp, "\" &");
         system(tmp);
     }
+    free(tmp);
 }
 
 void renItem(part *p){
-    char tmp[1024], ttmp[1024];
+    char *tmp = (char *) malloc(sizeof(char)*4096), *ttmp = (char *) malloc(sizeof(char)*4096);
 
     dAsk("New name", tmp);
-    strcpy(ttmp, "mv ");
+    strcpy(ttmp, "mv \"");
     strcat(ttmp, p->f.path);
     strcat(ttmp, p->f.files[p->w.currentLine]->d_name);
-    strcat(ttmp, " ");
+    strcat(ttmp, "\" \"");
     strcat(ttmp, p->f.path);
     strcat(ttmp, tmp);
+    strcat(ttmp, "\"");
     system(ttmp);
+    free(tmp);
+    free(ttmp);
 }
 
 void cmdKey(part *p){
-    char tmp[1024];
+    char *tmp = (char *) malloc(sizeof(char)*4096);
 
     dAsk("Command", tmp);
     if (p){
@@ -377,12 +399,16 @@ void cmdKey(part *p){
         strcat(tmp, p->f.files[p->w.currentLine]->d_name);
         strcat(tmp, "\"");
     }
+    FILE *f=fopen("log", "w");
+    fprintf(f, "=%s=", tmp);
+    fclose(f);
     execInBkg(tmp);
+    free(tmp);
 }
 
 void gInfo(part *p, wnd *w, int mCol){
-    int tY=1;
-    char tmp[1024];
+    int tY=1, sch;
+    char *tmp = (char *) malloc(sizeof(char)*4096);
     struct stat tset;
     short int octarray[9] = {0400, 0200, 0100, 0040, 0020, 0010, 0004, 0002, 0001};
     const char rs[]="rwx";
@@ -396,16 +422,25 @@ void gInfo(part *p, wnd *w, int mCol){
     tY += strlen(p->f.files[p->w.currentLine]->d_name)/(mCol/2) + 1;
     mvwprintw(w->win, tY++, 1, "Size: %dB", tset.st_size);
     mvwprintw(w->win, tY++, 1, "Access mode: ");
-    for (tY=0;tY<9;tY++){
-        if (tset.st_mode & octarray[tY])
-            wprintw(w->win, "%c", rs[tY%3]);
+    for (sch=0;sch<9;sch++){
+        if (tset.st_mode & octarray[sch])
+            wprintw(w->win, "%c", rs[sch%3]);
         else
             wprintw(w->win, "-");
-        ((tY+1)%3==0) ? wprintw(w->win, " ") : 0;
+        ((sch+1)%3==0) ? wprintw(w->win, " ") : 0;
     }
+    wprintw(w->win, "(%o)", (tset.st_mode & S_IRWXU)+(tset.st_mode & S_IRWXG)+(tset.st_mode & S_IRWXO));
+    mvwprintw(w->win, tY++, 1, "Owner: ");
+    sprintf(tmp, "getent passwd %d > /tmp/sfm-Owner", tset.st_uid);
+    system(tmp);
+    FILE *f=fopen("/tmp/sfm-Owner", "r");
+    fscanf(f, "%[^:]", tmp);
+    fclose(f);
+    wprintw(w->win, "%s", tmp);
     move(23, 0);
     wrefresh(w->win);
     getch();
+    free(tmp);
 }
 
 void kHome(wnd *w){
@@ -439,6 +474,8 @@ int main(int argc, char **argv){
     char tmp[32], TEd[32], term[64], lc[32];
     lPart.w.currentLine=0; rPart.w.currentLine=0;
     lPart.w.top=0; rPart.w.top=0;
+    lPart.f.path = (char *) malloc(sizeof(char)*4096);
+    rPart.f.path = (char *) malloc(sizeof(char)*4096);
 
     readConf(&lPart, &rPart, TEd, term, keys, lc);
     if (argc == 2)
@@ -546,12 +583,14 @@ int main(int argc, char **argv){
     endwin();
     saveConf(&lPart, &rPart);
     inCy=0;
-    while (lPart.f.files[inCy])
+    while (inCy<lPart.f.numbOfLines)
         free(lPart.f.files[inCy++]);
     free(lPart.f.files);
     inCy=0;
-    while (rPart.f.files[inCy])
+    while (inCy<rPart.f.numbOfLines)
         free(rPart.f.files[inCy++]);
     free(rPart.f.files);
+    free(lPart.f.path);
+    free(rPart.f.path);
     return 0;
 }
