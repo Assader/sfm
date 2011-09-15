@@ -33,6 +33,8 @@
 #include "iniparser/src/iniparser.c"
 #include "iniparser/src/dictionary.c"
 
+#define ACTIONS 9
+
 typedef struct{
         WINDOW *win;
         int currentLine;
@@ -43,7 +45,7 @@ typedef struct{
         char *path;
         struct dirent **files;
         int numbOfLines;
-        int hid;
+        int showHidden;
     } fl;
 
 typedef struct{
@@ -51,216 +53,15 @@ typedef struct{
         fl f;
     } part;
 
+typedef struct{
+        char key;
+        char *cmd;
+    } bnd;
+
+char *fTmp, *sTmp;
+
 int slt(const struct dirent *d){
      return strncmp(d->d_name, ".", 1);
-}
-
-void fillList(part *p){
-    int sch=0;
-
-    while (sch<p->f.numbOfLines)
-        free(p->f.files[sch++]);
-    p->f.numbOfLines = scandir(p->f.path, &p->f.files, (p->f.hid)?0:slt, alphasort);
-}
-
-void execInBkg(char *tmp){
-    strcat(tmp, " > /dev/null 2> /dev/null &");
-    system(tmp);
-}
-
-void setKeys(FILE *f, const char **cnf){
-    char *tmp = (char *) malloc(sizeof(char)*4096);
-    int sch, ssch=0;
-
-    echo();
-    clear();
-    printw("Enter name of your text editor: ");
-    scanw("%[^\n]", tmp);
-    fprintf(f, "[Global]\nText editor = %s ;\n", tmp);
-    clear();
-    printw("Enter name of your terminal emulator\nwith flags to execute: ");
-    scanw("%[^\n]", tmp);
-    fprintf(f, "Terminal emulator = %s ;\n", tmp);
-    fprintf(f, "Locale = %s ;\n[Binds]\n", getenv("LANG"));
-    noecho();
-    while (ssch<15){
-        clear();
-        printw("Enter symbol to action \"%s\": ", cnf[ssch]);
-        sch=getch();
-        fprintf(f, "%s = %c ;\n", cnf[ssch++], sch);
-    }
-    free(tmp);
-}
-
-void readConf(part *p, part *pp, char *td, char *term, int keys[], char *lc){
-    char *tmp = (char *) malloc(sizeof(char)*128), *ttmp = (char *) malloc(sizeof(char)*4);
-    const char *cnf[] = {"Another window", "Quit", "Hidden mode", "Same folder", "Change folder", "New folder", "Copy", "Move", "Remove", "Rename", "Parent folder", "Go to line", "Execute", "Info", "Execute command"};
-    int sch=0, ssch=0;
-    dictionary *ini;
-
-    strcpy(tmp, getenv("HOME"));
-    strcat(tmp, "/.config/sfm/tmp");
-    FILE *f=fopen(tmp, "r");
-    if (!f){
-        system("mkdir -p ~/.config/sfm/");
-        f=fopen(tmp, "w");
-        fprintf(f, "[Main]\nlPath = / ;\nrPath = / ;\nlHid = 0 ;\nrHid = 0 ;\n");
-    }
-    fclose(f);
-    ini = iniparser_load(tmp);
-    strcpy(p->f.path, iniparser_getstring(ini, "main:lpath", "/"));
-    strcpy(pp->f.path, iniparser_getstring(ini, "main:rpath", "/"));
-    p->f.hid = iniparser_getint(ini, "main:lhid", 0);
-    pp->f.hid = iniparser_getint(ini, "main:rhid", 0);
-    iniparser_freedict(ini);
-    strcpy(tmp, getenv("HOME"));
-    strcat(tmp, "/.config/sfm/sfm.conf");
-    f=fopen(tmp, "r");
-    if (!f){
-        printw("Main .conf file not found. (C)onfigure now or use (d)efault?");
-        sch=getch();
-        f=fopen(tmp, "w");
-        if (sch=='d'){
-            fprintf(f,"[Global]\nText editor = gedit ;\nTerminal emulator = xterm ;\nLocale = en_US.UTF-8 ;\n");
-            fprintf(f,"[Binds]\nAnother window = a ;\nQuit = q ;\nHidden mode = h ;\nSame folder = s ;\nChange folder = c ;\nNew folder = M ;\nCopy = C ;\nMove = m ;\nRemove = r ;\nRename = R ;\nParent folder = u ;\nGo to line = g ;\nExecute = X ;\nInfo = i ;\nExecute command = k ;\n");
-        }
-        else
-            setKeys(f, cnf);
-        fclose(f);
-        clear();
-        printw("Config saved to ~/.config/sfm/sfm.conf\nPress enter");
-        getch();
-        sch=0;
-    }
-    ini = iniparser_load(tmp);
-    strcpy(td, iniparser_getstring(ini, "global:text editor", "gedit"));
-    strcpy(term, iniparser_getstring(ini, "global:terminal emulator", "xterm"));
-    strcpy(lc, iniparser_getstring(ini, "global:locale", "en_US.UTF-8"));
-    strcpy(ttmp, iniparser_getstring(ini, "binds:another window", "a"));
-    if (ttmp[0]=='\0')
-        keys[sch++]=9;
-    else
-        keys[sch++]=ttmp[0];
-    while (sch<15){
-        strcpy(tmp, "binds:");
-        strcat(tmp, cnf[sch]);
-        strcpy(ttmp, iniparser_getstring(ini, tmp, NULL));
-        keys[sch++]=ttmp[0];
-    }
-    iniparser_freedict(ini);
-    free(tmp);
-    free(ttmp);
-}
-
-void saveConf(part *p, part *pp){
-    char *tmp = (char *) malloc(sizeof(char)*128);
-
-    strcpy(tmp, getenv("HOME"));
-    strcat(tmp, "/.config/sfm/tmp");
-    FILE *f=fopen(tmp, "w");
-    fprintf(f, "[Main]\nlPath = %s ;\n", p->f.path);
-    fprintf(f, "rPath = %s ;\n", pp->f.path);
-    fprintf(f, "lHid = %d ;\n", p->f.hid);
-    fprintf(f, "rHid = %d ;\n", pp->f.hid);
-    fclose(f);
-    free(tmp);
-}
-
-void setTop(wnd *w, int mRow, int dd){
-    if (dd)
-        w->currentLine=0;
-    if (w->currentLine>mRow-4)
-        w->top=w->currentLine-(mRow-5);
-    else
-        w->top=0;
-}
-
-void draw(part p, int mRow, int mCol){
-    int tY=1;
-    struct stat tset;
-    char *tmp = (char *) malloc(sizeof(char)*4096), *fStr = (char *) malloc(sizeof(char)*24);
-
-    sprintf(fStr, "%%.%ds", mCol/2-3);
-    wmove(p.w.win, 1, 1);
-    while ((tY<mRow-3)&&(tY-1<p.f.numbOfLines)){
-        wprintw(p.w.win, fStr, p.f.files[p.w.top + tY-1]->d_name);
-        strcpy(tmp, p.f.path);
-        strcat(tmp, p.f.files[p.w.top + tY-1]->d_name);
-        stat(tmp, &tset);
-        if (S_ISDIR(tset.st_mode))
-            wprintw(p.w.win, "/");
-        if ((tset.st_mode & S_IXUSR)&&(!S_ISDIR(tset.st_mode)))
-            wprintw(p.w.win, "*");
-        if (S_ISLNK(tset.st_mode))      //FIXME: try with S_IFLNK
-            wprintw(p.w.win, ">");
-        wmove(p.w.win, ++tY, 1);
-    }
-    free(tmp);
-    free(fStr);
-}
-
-void kUp(wnd *w, int nmbOfLines, int mRow){
-    --w->currentLine;
-    if (w->currentLine<0){
-        w->currentLine=nmbOfLines-1;
-        if (nmbOfLines>mRow-4)
-            w->top=w->currentLine-(mRow-5);
-        else
-            w->top=0;
-    }
-    if (w->currentLine<w->top)
-        --w->top;
-}
-
-void kDown(wnd *w, int nmbOfLines, int mRow){
-    ++w->currentLine;
-    if (w->currentLine>nmbOfLines-1){
-        w->currentLine=0;
-        w->top=0;
-    }
-    if (w->currentLine>w->top+(mRow-5))
-        ++w->top;
-}
-
-void kEnter(part *p, char *td, char *term, int mRow){
-    char *tmp = (char *) malloc(sizeof(char)*4096), *ttmp = (char *) malloc(sizeof(char)*4096);
-    struct stat tset;
-
-    if (p->f.numbOfLines){
-        strcpy(tmp, p->f.path);
-        strcat(tmp, p->f.files[p->w.currentLine]->d_name);
-        stat(tmp, &tset);
-        if (S_ISDIR(tset.st_mode)){
-            strcat(p->f.path, p->f.files[p->w.currentLine]->d_name);
-            strcat(p->f.path, "/");
-            fillList(p);
-            setTop(&p->w, mRow, 1);
-        }
-        else if ((S_ISREG(tset.st_mode))&&(!(tset.st_mode & S_IXUSR))){
-            strcpy(ttmp, td);
-            strcat(ttmp, " ");
-            strcat(ttmp, tmp);
-            execInBkg(ttmp);
-        }
-        else if (tset.st_mode & S_IXUSR){
-            strcpy(ttmp, term);
-            strcat(ttmp, " ");
-            strcat(ttmp, tmp);
-            execInBkg(ttmp);
-        }
-    }
-    free(tmp);
-    free(ttmp);
-}
-
-void kPFld(fl *f){
-    int i;
-
-    for(i=strlen(f->path)-2;i>=0;i--)
-        if (f->path[i]=='/'){
-            f->path[i+1]='\0';
-            break;
-        }
 }
 
 void dAsk(char *i, char *o){
@@ -270,218 +71,394 @@ void dAsk(char *i, char *o){
     noecho();
 }
 
-void reSize(wnd *w, wnd *w1, int *mRow, int *mCol){
+void fillList(part *fPart){
+    while (fPart->f.numbOfLines--)
+        free(fPart->f.files[fPart->f.numbOfLines]);
+    fPart->f.numbOfLines = scandir(fPart->f.path, &fPart->f.files, (fPart->f.showHidden)?0:slt, alphasort);
+}
+
+void parseCmd(char *cmd, part *fPart, part *sPart){
+    char *outCmd = (char *) malloc(sizeof(char)*1024),
+         *tmp;
+
+    strcpy(fTmp, cmd);
+    strcpy(outCmd, "");
+    tmp = strtok(fTmp, "%");
+    while (tmp){
+        if (tmp[0]=='U'){
+            ++tmp;
+            dAsk(tmp, sTmp);
+            if (strcmp(sTmp, ""))
+                return;
+            strcat(outCmd, sTmp);
+        }
+        else if (((tmp[0]=='c')||(tmp[0]=='a'))&&((tmp[1]=='f')||(tmp[1]=='F'))){
+            if ((tmp[0]=='c')&&(tmp[1]=='f'))
+                strcat(outCmd, fPart->f.path);
+            else if ((tmp[0]=='c')&&(tmp[1]=='F'))
+                strcat(outCmd, fPart->f.files[fPart->w.currentLine]->d_name);
+            else if (tmp[0]=='a'&&(tmp[1]=='f'))
+                strcat(outCmd, sPart->f.path);
+            tmp+=2;
+            tmp ? strcat(outCmd, tmp) : 0;
+        }
+        else
+            strcat(outCmd, tmp);
+        tmp = strtok(NULL, "%");    
+    }
+    system(outCmd);
+    free(tmp);
+    free(outCmd);
+}
+
+void execInBkg(char *cmd){
+    strcat(cmd, " > /dev/null 2> /dev/null &");
+    system(cmd);
+}
+
+
+void setKeys(FILE *f, const char **actions){
+    int i=0, ch;
+
+    echo();
+    clear();
+    printw("Enter name of your text editor: ");
+    scanw("%[^\n]", fTmp);
+    fprintf(f, "[Global]\nText editor = %s ;\n", fTmp);
+    clear();
+    printw("Enter name of your terminal emulator\nwith flags to execute: ");
+    scanw("%[^\n]", fTmp);
+    fprintf(f, "Terminal emulator = %s ;\nLocale = %s ;\n[Binds]\n", fTmp, getenv("LANG"));
+    noecho();
+    while (i<ACTIONS){
+        clear();
+        printw("Enter symbol to action \"%s\": ", actions[i]);
+        ch=getch();
+        fprintf(f, "%s = %c ;\n", actions[i++], ch);
+    }
+}
+
+void readConf(part *fPart, part *sPart, char *tEditor, char *term, int *keys, char *loc){
+    const char *actions[ACTIONS] = {"Another window", "Quit", "Hidden mode", "Same folder", "Change folder", "Parent folder", "Go to line", "Info", "Execute command"};
+    int i=0;
+    dictionary *ini;
+
+    initscr();
+    strcpy(fTmp, getenv("HOME"));
+    strcat(fTmp, "/.config/sfm/tmp");
+    FILE *f = fopen(fTmp, "r");
+    if (!f){
+        system("mkdir -p ~/.config/sfm/");
+        f=fopen(fTmp, "w");
+        fprintf(f, "[Main]\nlPath = / ;\nrPath = / ;\nlHid = 0 ;\nrHid = 0 ;\n");
+    }
+    fclose(f);
+    ini = iniparser_load(fTmp);
+    strcpy(fPart->f.path, iniparser_getstring(ini, "main:lpath", "/"));
+    strcpy(sPart->f.path, iniparser_getstring(ini, "main:rpath", "/"));
+    fPart->f.showHidden = iniparser_getint(ini, "main:lhid", 0);
+    sPart->f.showHidden = iniparser_getint(ini, "main:rhid", 0);
+    iniparser_freedict(ini);
+    strcpy(fTmp, getenv("HOME"));
+    strcat(fTmp, "/.config/sfm/sfm.conf");
+    f = fopen(fTmp, "r");
+    if (!f){
+        printw("Main .conf file not found. (C)onfigure now or use (d)efault?");
+        i = getch();
+        f = fopen(fTmp, "w");
+        if (i=='d')
+            fprintf(f,"[Global]\nText editor = gedit ;\nTerminal emulator = xterm ;\nLocale = en_US.UTF-8 ;\n"
+                      "[Binds]\nAnother window = a ;\nQuit = q ;\nHidden mode = h ;\nSame folder = s ;\nChange folder = c ;\n"
+                      "Parent folder = u ;\nGo to line = g ;\nInfo = i ;\nExecute command = k ;\n"
+                      "[uBinds]\n# %%cf - current folder\n# %%cF - current file\n# %%af - another folder\n"
+                      "# %%UEnter your text here%% - get text\n# M = mkdir -p %%UName of new folder%%\n# C = cp -r %%cf%%cF %%af\n");
+        else
+            setKeys(f, actions);
+        fclose(f);
+        clear();
+        printw("Config saved to ~/.config/sfm/sfm.conf\nYou can set user-binds in.\nPress enter");
+        getch();
+        i = 0;
+    }
+    ini = iniparser_load(fTmp);
+    strcpy(tEditor, iniparser_getstring(ini, "global:text editor", "gedit"));
+    strcpy(term, iniparser_getstring(ini, "global:terminal emulator", "xterm"));
+    strcpy(loc, iniparser_getstring(ini, "global:locale", "en_US.UTF-8"));
+    strcpy(sTmp, iniparser_getstring(ini, "binds:another window", "a"));
+    if (sTmp[0]=='\0')
+        keys[i++] = 9;
+    else
+        keys[i++] = sTmp[0];
+    while (i<ACTIONS){
+        sprintf(fTmp, "binds:%s", actions[i]);
+        strcpy(sTmp, iniparser_getstring(ini, fTmp, NULL));
+        keys[i++] = sTmp[0];
+    }
+    i = 0;
+    iniparser_freedict(ini);
+    endwin();
+}
+
+bnd **getUserBinds(int *numbOfBinds){
+    const char *symbols = "qwertyuiopasdfghjklzxcvbnm";
+    bnd **ubinds = (bnd **) malloc(sizeof(bnd *));
+    int i=0;
+    dictionary *ini;
+
+    strcpy(fTmp, getenv("HOME"));
+    strcat(fTmp, "/.config/sfm/sfm.conf");
+    ini = iniparser_load(fTmp);
+    while (i<strlen(symbols)){
+        sprintf(fTmp, "ubinds:%c", symbols[i]);
+        strcpy(fTmp, iniparser_getstring(ini, fTmp, "\n"));
+        if (fTmp[0]!='\n'){
+            ubinds = (bnd **) realloc(ubinds, sizeof(bnd *)*((*numbOfBinds)+1));
+            ubinds[*numbOfBinds] = (bnd *) malloc(sizeof(bnd));
+            ubinds[*numbOfBinds]->key = symbols[i];
+            ubinds[*numbOfBinds]->cmd = (char *) malloc((size_t)strlen(fTmp)+1);
+            strcpy(ubinds[*numbOfBinds]->cmd, fTmp);
+            ++(*numbOfBinds);
+        }
+        ++i;
+    }
+    iniparser_freedict(ini);
+    return ubinds;
+}
+
+void saveConf(part *fPart, part *sPart){
+    strcpy(fTmp, getenv("HOME"));
+    strcat(fTmp, "/.config/sfm/tmp");
+    FILE *f = fopen(fTmp, "w");
+    fprintf(f, "[Main]\nlPath = %s ;\nrPath = %s ;\nlHid = %d ;\nrHid = %d ;\n",
+               fPart->f.path, sPart->f.path, fPart->f.showHidden, sPart->f.showHidden);
+    fclose(f);
+}
+
+void setTop(wnd *fWind, int mRow, int mkSt){
+    if (mkSt)
+        fWind->currentLine=0;
+    if (fWind->currentLine>mRow-4)
+        fWind->top = fWind->currentLine-(mRow-5);
+    else
+        fWind->top = 0;
+}
+
+void draw(part *fPart, int mRow, int mCol){
+    int tY=1;
+    struct stat fStat;
+
+    wmove(fPart->w.win, 1, 1);
+    while ((tY<mRow-3)&&(tY-1<fPart->f.numbOfLines)){
+        wprintw(fPart->w.win, "%.*s", mCol/2-3, fPart->f.files[fPart->w.top + tY-1]->d_name);
+        strcpy(fTmp, fPart->f.path);
+        strcat(fTmp, fPart->f.files[fPart->w.top + tY-1]->d_name);
+        stat(fTmp, &fStat);
+        if (S_ISDIR(fStat.st_mode))
+            wprintw(fPart->w.win, "/");
+        if ((fStat.st_mode & S_IXUSR)&&(!S_ISDIR(fStat.st_mode)))
+            wprintw(fPart->w.win, "*");
+        if (S_ISLNK(fStat.st_mode))      //FIXME: try with S_IFLNK
+            wprintw(fPart->w.win, ">");
+        wmove(fPart->w.win, ++tY, 1);
+    }
+}
+
+void kUp(wnd *fWind, int numbOfLines, int mRow){
+    --fWind->currentLine;
+    if (fWind->currentLine<0){
+        fWind->currentLine = numbOfLines-1;
+        if (numbOfLines>mRow-4)
+            fWind->top = fWind->currentLine-(mRow-5);
+        else
+            fWind->top = 0;
+    }
+    if (fWind->currentLine<fWind->top)
+        --fWind->top;
+}
+
+void kDown(wnd *fWind, int numbOfLines, int mRow){
+    ++fWind->currentLine;
+    if (fWind->currentLine>numbOfLines-1){
+        fWind->currentLine = 0;
+        fWind->top = 0;
+    }
+    if (fWind->currentLine>fWind->top+(mRow-5))
+        ++fWind->top;
+}
+
+void kEnter(part *fPart, char *tEditor, char *term, int mRow){
+    struct stat fStat;
+
+    if (fPart->f.numbOfLines){
+        strcpy(fTmp, fPart->f.path);
+        strcat(fTmp, fPart->f.files[fPart->w.currentLine]->d_name);
+        stat(fTmp, &fStat);
+        if (S_ISDIR(fStat.st_mode)){
+            strcat(fPart->f.path, fPart->f.files[fPart->w.currentLine]->d_name);
+            strcat(fPart->f.path, "/");
+            fillList(fPart);
+            setTop(&fPart->w, mRow, 1);
+        }
+        else if ((S_ISREG(fStat.st_mode))&&(!(fStat.st_mode & S_IXUSR))){
+            strcpy(sTmp, tEditor);
+            strcat(sTmp, " ");
+            strcat(sTmp, fTmp);
+            execInBkg(sTmp);
+        }
+        else if (fStat.st_mode & S_IXUSR){
+            strcpy(sTmp, term);
+            strcat(sTmp, " ");
+            strcat(sTmp, fTmp);
+            execInBkg(sTmp);
+        }
+    }
+}
+
+void kPFld(fl *fFold){
+    int i;
+
+    for(i=strlen(fFold->path)-2;i>=0;i--)
+        if (fFold->path[i]=='/'){
+            fFold->path[i+1]='\0';
+            break;
+        }
+}
+
+void reSize(wnd *fWind, wnd *sWind, int *mRow, int *mCol){
     int tmX, tmY;
 
     getmaxyx(stdscr, tmY, tmX);
     if ((*mRow!=tmY)||(*mCol!=tmX)){
-        delwin(w->win);
-        delwin(w1->win);
+        delwin(fWind->win);
+        delwin(sWind->win);
         wclear(stdscr);
-        w->win = newwin(tmY-2, tmX/2, 1, 0);
-        w1->win = newwin(tmY-2, tmX/2, 1, tmX/2);
+        fWind->win = newwin(tmY-2, tmX/2, 1, 0);
+        sWind->win = newwin(tmY-2, tmX/2, 1, tmX/2);
         *mRow=tmY;
         *mCol=tmX;
     }
 }
 
-void goToLine(part *p, int mRow){
+void goToLine(part *fPart, int mRow){
     echo();
     printw("New position: ");
-    scanw("%d", &p->w.currentLine);
+    scanw("%d", &fPart->w.currentLine);
     noecho();
-    if ((--p->w.currentLine<0)||(p->w.currentLine>p->f.numbOfLines)){
-        p->w.top=0;
-        p->w.currentLine=0;
+    if ((--fPart->w.currentLine<0)||(fPart->w.currentLine>fPart->f.numbOfLines)){
+        fPart->w.top = 0;
+        fPart->w.currentLine = 0;
     }
-    setTop(&p->w, mRow, 0);
+    setTop(&fPart->w, mRow, 0);
 }
 
-void chDir(fl *f){
-    char *tmp = (char *) malloc(sizeof(char)*4096);
-
-    dAsk("Name of folder", tmp);
-    if (tmp[strlen(tmp)-1]!='/')
-        strcat(tmp, "/");
-    if (tmp[0]=='/')
-        strcpy(f->path, tmp);
-    else
-        strcat(f->path, tmp);
-    free(tmp);
-}
-
-void newDir(fl *f){
-    char *tmp = (char *) malloc(sizeof(char)*4096), *ttmp = (char *) malloc(sizeof(char)*4096);
-
-    dAsk("Name of new folder", tmp);
-    if (tmp[0]=='/'){
-        strcpy(ttmp, "mkdir ");
-        system(strcat(ttmp, tmp));
-    }
-    else{
-        strcpy(ttmp, "mkdir ");
-        strcat(ttmp, f->path);
-        strcat(ttmp, tmp);
-        system(ttmp);
-    }
-    free(tmp);
-    free(ttmp);
-}
-
-void cpItem(part *p, part *pp){
-    char *tmp = (char *) malloc(sizeof(char)*4096);
-    struct stat tset;
-
-    strcpy(tmp, "cp \"");
-    strcat(tmp, p->f.path);
-    strcat(tmp, p->f.files[p->w.currentLine]->d_name);
-    stat(tmp, &tset);
-    strcat(tmp, "\"");
-    if (S_ISDIR(tset.st_mode))
-        strcat(tmp, " -r");
-    strcat(tmp, " \"");
-    strcat(tmp, pp->f.path);
-    strcat(tmp, "\" &");
-    system(tmp);
-    free(tmp);
-}
-
-void moveItem(part *p, part *pp){
-    char *tmp = (char *) malloc(sizeof(char)*4096);
-
-    strcpy(tmp, "mv \"");
-    strcat(tmp, p->f.path);
-    strcat(tmp, p->f.files[p->w.currentLine]->d_name);
-    strcat(tmp, "\" \"");
-    strcat(tmp, pp->f.path);
-    strcat(tmp, "\" &");
-    system(tmp);
-    free(tmp);
-}
-
-void rmItem(part *p){
-    char *tmp = (char *) malloc(sizeof(char)*4096);
-
-    dAsk("Are you SURE?", tmp);
-    if (tmp[0]=='y'){
-        strcpy(tmp, "rm -rf \"");
-        strcat(tmp, p->f.path);
-        strcat(tmp, p->f.files[p->w.currentLine]->d_name);
-        strcat(tmp, "\" &");
-        system(tmp);
-    }
-    free(tmp);
-}
-
-void renItem(part *p){
-    char *tmp = (char *) malloc(sizeof(char)*4096), *ttmp = (char *) malloc(sizeof(char)*4096);
-
-    dAsk("New name", tmp);
-    strcpy(ttmp, "mv \"");
-    strcat(ttmp, p->f.path);
-    strcat(ttmp, p->f.files[p->w.currentLine]->d_name);
-    strcat(ttmp, "\" \"");
-    strcat(ttmp, p->f.path);
-    strcat(ttmp, tmp);
-    strcat(ttmp, "\"");
-    system(ttmp);
-    free(tmp);
-    free(ttmp);
-}
-
-void cmdKey(part *p){
-    char *tmp = (char *) malloc(sizeof(char)*4096);
-
-    dAsk("Command", tmp);
-    if (p){
-        strcat(tmp, "\"");
-        strcat(tmp, p->f.path);
-        strcat(tmp, p->f.files[p->w.currentLine]->d_name);
-        strcat(tmp, "\"");
-    }
-    FILE *f=fopen("log", "w");
-    fprintf(f, "=%s=", tmp);
-    fclose(f);
-    execInBkg(tmp);
-    free(tmp);
-}
-
-void gInfo(part *p, wnd *w, int mCol){
-    int tY=1, sch;
-    char *tmp = (char *) malloc(sizeof(char)*4096);
-    struct stat tset;
-    short int octarray[9] = {0400, 0200, 0100, 0040, 0020, 0010, 0004, 0002, 0001};
-    const char rs[]="rwx";
-
-    wclear(w->win);
-    box(w->win, 0, 0);
-    strcpy(tmp, p->f.path);
-    strcat(tmp, p->f.files[p->w.currentLine]->d_name);
-    stat(tmp, &tset);
-    mvwprintw(w->win, tY, 1, "Name: %s", p->f.files[p->w.currentLine]->d_name);
-    tY += strlen(p->f.files[p->w.currentLine]->d_name)/(mCol/2) + 1;
-    mvwprintw(w->win, tY++, 1, "Size: %dB", tset.st_size);
-    mvwprintw(w->win, tY++, 1, "Access mode: ");
-    for (sch=0;sch<9;sch++){
-        if (tset.st_mode & octarray[sch])
-            wprintw(w->win, "%c", rs[sch%3]);
+void chDir(fl *fFold){
+    dAsk("Name of folder", fTmp);
+    if (!strcmp(fTmp, "")){
+        if (fTmp[strlen(fTmp)-1]!='/')
+            strcat(fTmp, "/");
+        if (fTmp[0]=='/')
+            strcpy(fFold->path, fTmp);
         else
-            wprintw(w->win, "-");
-        ((sch+1)%3==0) ? wprintw(w->win, " ") : 0;
+            strcat(fFold->path, fTmp);
     }
-    wprintw(w->win, "(%o)", (tset.st_mode & S_IRWXU)+(tset.st_mode & S_IRWXG)+(tset.st_mode & S_IRWXO));
-    mvwprintw(w->win, tY++, 1, "Owner: ");
-    sprintf(tmp, "getent passwd %d > /tmp/sfm-Owner", tset.st_uid);
-    system(tmp);
-    FILE *f=fopen("/tmp/sfm-Owner", "r");
-    fscanf(f, "%[^:]", tmp);
+}
+
+void cmdKey(){
+    dAsk("Command", fTmp);
+    if (strcmp(fTmp, ""))
+        system(fTmp);
+}
+
+char *pSize(long int s){
+    const char *sizes[] = {"B", "kB", "MB", "GB", "TB", "PB", "EB"};
+    int i=0;
+    double sz = (double) s;
+
+    while (sz>1024){
+        sz /= 1024;
+        ++i;
+    }
+    sprintf(fTmp, "%.2lf %s", sz, sizes[i]);
+    return fTmp;
+}
+
+void gInfo(part *fPart, wnd *fWind, int mCol){
+    const short int octarray[9] = {0400, 0200, 0100, 0040, 0020, 0010, 0004, 0002, 0001};
+    const char *rwx="rwx";
+    int tY=1, i;
+    struct stat fStat;
+
+    wclear(fWind->win);
+    box(fWind->win, 0, 0);
+    strcpy(fTmp, fPart->f.path);
+    strcat(fTmp, fPart->f.files[fPart->w.currentLine]->d_name);
+    stat(fTmp, &fStat);
+    mvwprintw(fWind->win, tY, 1, "Name: %s", fPart->f.files[fPart->w.currentLine]->d_name);
+    tY += (strlen(fPart->f.files[fPart->w.currentLine]->d_name)+6)/(mCol/2) + 1;
+    mvwprintw(fWind->win, tY++, 1, "Size: %s", pSize(fStat.st_size));
+    mvwprintw(fWind->win, tY++, 1, "Access mode: ");
+    for (i=0;i<9;i++){
+        if (fStat.st_mode & octarray[i])
+            wprintw(fWind->win, "%c", rwx[i%3]);
+        else
+            wprintw(fWind->win, "-");
+        ((i+1)%3==0) ? wprintw(fWind->win, " ") : 0;
+    }
+    wprintw(fWind->win, "(%o)", (fStat.st_mode & S_IRWXU)+(fStat.st_mode & S_IRWXG)+(fStat.st_mode & S_IRWXO));
+    mvwprintw(fWind->win, tY++, 1, "Owner: ");
+    sprintf(fTmp, "getent passwd %d > /tmp/sfm-Owner", fStat.st_uid);
+    system(fTmp);
+    FILE *f = fopen("/tmp/sfm-Owner", "r");
+    fscanf(f, "%[^:]", fTmp);
     fclose(f);
-    wprintw(w->win, "%s", tmp);
+    wprintw(fWind->win, "%s", fTmp);
     move(23, 0);
-    wrefresh(w->win);
+    wrefresh(fWind->win);
     getch();
-    free(tmp);
 }
 
-void kHome(wnd *w){
-    w->currentLine=0;
-    w->top=0;
+void kHome(wnd *fWind){
+    fWind->currentLine = 0;
+    fWind->top = 0;
 }
 
-void kEnd(part *p, int mRow){
-    p->w.currentLine = p->f.numbOfLines-1;
-    setTop(&p->w, mRow, 0);
+void kEnd(part *fPart, int mRow){
+    fPart->w.currentLine = fPart->f.numbOfLines-1;
+    setTop(&fPart->w, mRow, 0);
 }
 
-void nfo(part *p, int mCol){
-    int sch;
+void nfo(part *fPart, int mCol){
     char *rd;
 
-    mvwchgat(p->w.win, p->w.currentLine-p->w.top+1, 1, mCol/2-2, A_REVERSE, 0, NULL);
-    if (strlen(p->f.path)<(mCol-15))
-        mvprintw(0, 0, "%s", p->f.path);
+    mvwchgat(fPart->w.win, fPart->w.currentLine-fPart->w.top+1, 1, mCol/2-2, A_REVERSE, 0, NULL);
+    if (strlen(fPart->f.path)<(mCol-15))
+        mvprintw(0, 0, "%s", fPart->f.path);
     else{
-        rd=&p->f.path[strlen(p->f.path)-mCol+17];
+        rd=&fPart->f.path[strlen(fPart->f.path)-mCol+17];
         mvprintw(0, 0, "..");
         printw("%s", rd);
     }
-    mvprintw(0, mCol-15, "|%d/%d", p->w.currentLine+1, p->f.numbOfLines);
+    mvprintw(0, mCol-15, "|%d/%d", fPart->w.currentLine+1, fPart->f.numbOfLines);
 }
 
 int main(int argc, char **argv){
-    int mRow=0, mCol=0, lOrR=0, cmd, inCy=1, keys[15];         //lOrR = left ot right (selected)
+    int mRow=0, mCol=0, lOrR=0, cmd, inCy=1, keys[15], numbOfBinds=0;         //lOrR = left ot right (selected) //cob = count of binds
     part lPart, rPart, *tmpCPt, *tmpAPt;
-    char tmp[32], TEd[32], term[64], lc[32];
+    char tEditor[32], term[64], loc[32];
+    bnd **ubinds=NULL;
     lPart.w.currentLine=0; rPart.w.currentLine=0;
     lPart.w.top=0; rPart.w.top=0;
     lPart.f.path = (char *) malloc(sizeof(char)*4096);
     rPart.f.path = (char *) malloc(sizeof(char)*4096);
+    fTmp = (char *) malloc(sizeof(char)*8192);
+    sTmp = (char *) malloc(sizeof(char)*8192);
 
-    readConf(&lPart, &rPart, TEd, term, keys, lc);
+    readConf(&lPart, &rPart, tEditor, term, keys, loc);
+    ubinds = getUserBinds(&numbOfBinds);
     if (argc == 2)
         strcpy(lPart.f.path, argv[1]);
-    if (!setlocale(LC_ALL, lc)){
-      printf("Can't set the locale!\nSome filenames can display wrong.\nCheck ~/.config/sfm/sfm.conf");
+    if (!setlocale(LC_CTYPE, loc)){
+      fprintf(stderr, "Can't set the locale!\nSome filenames can display wrong.\nCheck ~/.config/sfm/sfm.conf");
       getch();
     }
     initscr();
@@ -501,8 +478,8 @@ int main(int argc, char **argv){
             mvprintw(0, mCol-1, "%c", cmd);
         tmpCPt = lOrR ? &rPart : &lPart;
         tmpAPt = lOrR ? &lPart : &rPart;
-        draw(lPart, mRow, mCol);
-        draw(rPart, mRow, mCol);
+        draw(&lPart, mRow, mCol);
+        draw(&rPart, mRow, mCol);
         nfo(tmpCPt, mCol);
         refresh();
         wrefresh(lPart.w.win);
@@ -514,16 +491,16 @@ int main(int argc, char **argv){
         else if (cmd==KEY_DOWN)
             kDown(&tmpCPt->w, tmpCPt->f.numbOfLines, mRow);
         else if ((cmd==KEY_ENTER)||(cmd=='\n'))
-            kEnter(tmpCPt, TEd, term, mRow);
+            kEnter(tmpCPt, tEditor, term, mRow);
         else if (cmd==keys[0])
             lOrR = !lOrR;
         else if (cmd==keys[1]){
-            dAsk("Are you sure, quit?", tmp);
-            if (tmp[0]=='y')
+            dAsk("Are you sure, quit?", fTmp);
+            if (fTmp[0]=='y')
                 inCy=0;
             }
         else if (cmd==keys[2]){
-            tmpCPt->f.hid = !tmpCPt->f.hid;
+            tmpCPt->f.showHidden = !tmpCPt->f.showHidden;
             fillList(tmpCPt);
             setTop(&tmpCPt->w, mRow, 1);
             }
@@ -538,32 +515,16 @@ int main(int argc, char **argv){
             setTop(&tmpCPt->w, mRow, 1);
             }
         else if (cmd==keys[5]){
-            newDir(&tmpCPt->f);
-            fillList(tmpCPt);
-            }
-        else if (cmd==keys[6])
-            cpItem(tmpCPt, tmpAPt);
-        else if (cmd==keys[7])
-            moveItem(tmpCPt, tmpAPt);
-        else if (cmd==keys[8])
-            rmItem(tmpCPt);
-        else if (cmd==keys[9]){
-            renItem(tmpCPt);
-            fillList(tmpCPt);
-            }
-        else if (cmd==keys[10]){
             kPFld(&tmpCPt->f);
             fillList(tmpCPt);
             setTop(&tmpCPt->w, mRow, 1);
             }
-        else if (cmd==keys[11])
+        else if (cmd==keys[6])
             goToLine(tmpCPt, mRow);
-        else if (cmd==keys[12])
-            cmdKey(tmpCPt);
-        else if (cmd==keys[13])
+        else if (cmd==keys[7])
             gInfo(tmpCPt, &tmpAPt->w, mCol);
-        else if (cmd==keys[14])
-            cmdKey(NULL);
+        else if (cmd==keys[8])
+            cmdKey();
         else if (cmd==KEY_F(5)){
             fillList(&lPart);
             fillList(&rPart);
@@ -572,12 +533,27 @@ int main(int argc, char **argv){
             }
         else if (cmd==KEY_F(6)){
             saveConf(&lPart, &rPart);
-            readConf(&lPart, &rPart, TEd, term, keys, lc);
+            endwin();
+            readConf(&lPart, &rPart, tEditor, term, keys, loc);
+            ubinds = getUserBinds(&numbOfBinds);
+            if (!setlocale(LC_CTYPE, loc)){
+              fprintf(stderr, "Can't set the locale!\nSome filenames can display wrong.\nCheck ~/.config/sfm/sfm.conf");
+              getch();
+            }
+            initscr();
             }
         else if (cmd==KEY_HOME)
             kHome(&tmpCPt->w);
-        else if (cmd=KEY_END)
+        else if (cmd==KEY_END)
             kEnd(tmpCPt, mRow);
+        else {
+            for(inCy=0;inCy<numbOfBinds;inCy++)
+                if (cmd==ubinds[inCy]->key){
+                    parseCmd(ubinds[inCy]->cmd, tmpCPt, tmpAPt);
+                    break;
+                }
+            inCy = 1;
+        }
     }
 
     endwin();
@@ -589,8 +565,14 @@ int main(int argc, char **argv){
     inCy=0;
     while (inCy<rPart.f.numbOfLines)
         free(rPart.f.files[inCy++]);
+    inCy=0;
+    while (inCy<numbOfBinds)
+        free(ubinds[inCy++]);
+    free(ubinds);
     free(rPart.f.files);
     free(lPart.f.path);
     free(rPart.f.path);
+    free(fTmp);
+    free(sTmp);
     return 0;
 }
