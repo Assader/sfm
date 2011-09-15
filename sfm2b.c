@@ -170,8 +170,7 @@ void readConf(part *fPart, part *sPart, char *tEditor, char *term, int *keys, ch
             fprintf(f,"[Global]\nText editor = gedit ;\nTerminal emulator = xterm ;\nLocale = en_US.UTF-8 ;\n"
                       "[Binds]\nAnother window = a ;\nQuit = q ;\nHidden mode = h ;\nSame folder = s ;\nChange folder = c ;\n"
                       "Parent folder = u ;\nGo to line = g ;\nInfo = i ;\nExecute command = k ;\n"
-                      "[uBinds]\n# %%cf - current folder\n# %%cF - current file\n# %%af - another folder\n"
-                      "# %%UEnter your text here%% - get text\n# M = mkdir -p %%UName of new folder%%\n# C = cp -r %%cf%%cF %%af\n");
+                      "[uBinds]\n");
         else
             setKeys(f, actions);
         fclose(f);

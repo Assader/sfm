@@ -1,16 +1,8 @@
 q     - quit                                                    (Y)
-m     - move file                                               (Y)
-M     - make folder                                             (Y)
-C     - copy file                                               (Y)
 c     - change folder (cd)                                      (Y)
 s     - open in another window same folder                      (Y)
 h     - show/hide hidden files                                  (Y)
-r     - remove file                                             (Y)
-R     - rename item                                             (Y)
-f     - filter                                                  (F)
-x     - execute                                                 (Y)
-X     - execute in new terminal                                 (Y)
-enter - open folder/open file (if specified text editor)        (Y)
+enter - open folder/open file(if specified text editor)/execute (Y)
 u     - parent folder                                           (Y)
 a     - select another window                                   (Y)
 g     - go to entered line                                      (Y)
@@ -25,7 +17,15 @@ Also u can type "sfm /path/to/smth".                            (Y)
 Save/load setings from .conf                                    (Y)
 Runtime resize                                                  (Y)
 
+Syntax of [uBinds]:
+%cf - current folder
+%cF - current file
+%af - another folder
+%UEnter your text here% - get text
+M = mkdir -p '%UName of new folder%'
+C = cp -r '%cf%cF' '%af'
+
 Y - yes
 N - no
 W - developing
-F - in next version (>=0.02c)
+F - in next version (>=0.03a)
