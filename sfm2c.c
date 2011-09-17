@@ -64,20 +64,25 @@ int slt(const struct dirent *d){
      return strncmp(d->d_name, ".", 1);
 }
 
-void dAsk(char *i, char *o){
+void ask(char *i, char *o){
     echo();
     printw("%s: ", i);
     scanw("%[^\n]", o);
     noecho();
 }
 
+void mFree(void **ptr, int len){
+    while(len--)
+        free(ptr[len]);
+    free(ptr);
+}
+
 void fillList(part *fPart){
-    while (fPart->f.numbOfLines--)
-        free(fPart->f.files[fPart->f.numbOfLines]);
+    fPart->f.numbOfLines ? mFree((void **)fPart->f.files, fPart->f.numbOfLines) : 0;
     fPart->f.numbOfLines = scandir(fPart->f.path, &fPart->f.files, (fPart->f.showHidden)?0:slt, alphasort);
 }
 
-void parseCmd(char *cmd, part *fPart, part *sPart){
+void parseCmd(part *fPart, part *sPart, char *cmd){
     char *outCmd = (char *) malloc(sizeof(char)*1024),
          *tmp;
 
@@ -87,8 +92,8 @@ void parseCmd(char *cmd, part *fPart, part *sPart){
     while (tmp){
         if (tmp[0]=='U'){
             ++tmp;
-            dAsk(tmp, sTmp);
-            if (strcmp(sTmp, ""))
+            ask(tmp, sTmp);
+            if (!strcmp(sTmp, ""))
                 return;
             strcat(outCmd, sTmp);
         }
@@ -193,14 +198,13 @@ void readConf(part *fPart, part *sPart, char *tEditor, char *term, int *keys, ch
         strcpy(sTmp, iniparser_getstring(ini, fTmp, NULL));
         keys[i++] = sTmp[0];
     }
-    i = 0;
     iniparser_freedict(ini);
     endwin();
 }
 
-bnd **getUserBinds(int *numbOfBinds){
+void getUserBinds(int *numbOfBinds, bnd ***ubinds){
     const char *symbols = "qwertyuiopasdfghjklzxcvbnm";
-    bnd **ubinds = (bnd **) malloc(sizeof(bnd *));
+    *ubinds = (bnd **) malloc(sizeof(bnd *));
     int i=0;
     dictionary *ini;
 
@@ -211,17 +215,16 @@ bnd **getUserBinds(int *numbOfBinds){
         sprintf(fTmp, "ubinds:%c", symbols[i]);
         strcpy(fTmp, iniparser_getstring(ini, fTmp, "\n"));
         if (fTmp[0]!='\n'){
-            ubinds = (bnd **) realloc(ubinds, sizeof(bnd *)*((*numbOfBinds)+1));
-            ubinds[*numbOfBinds] = (bnd *) malloc(sizeof(bnd));
-            ubinds[*numbOfBinds]->key = symbols[i];
-            ubinds[*numbOfBinds]->cmd = (char *) malloc((size_t)strlen(fTmp)+1);
-            strcpy(ubinds[*numbOfBinds]->cmd, fTmp);
+            ((*numbOfBinds)>0) ? *ubinds = (bnd **) realloc(*ubinds, sizeof(bnd *)*((*numbOfBinds)+1)) : 0;
+            (*ubinds)[*numbOfBinds] = (bnd *) malloc(sizeof(bnd));
+            (*ubinds)[*numbOfBinds]->key = symbols[i];
+            (*ubinds)[*numbOfBinds]->cmd = (char *) malloc((size_t)strlen(fTmp)+1);
+            strcpy((*ubinds)[*numbOfBinds]->cmd, fTmp);
             ++(*numbOfBinds);
         }
         ++i;
     }
     iniparser_freedict(ini);
-    return ubinds;
 }
 
 void saveConf(part *fPart, part *sPart){
@@ -351,7 +354,7 @@ void goToLine(part *fPart, int mRow){
 }
 
 void chDir(fl *fFold){
-    dAsk("Name of folder", fTmp);
+    ask("Name of folder", fTmp);
     if (!strcmp(fTmp, "")){
         if (fTmp[strlen(fTmp)-1]!='/')
             strcat(fTmp, "/");
@@ -363,7 +366,7 @@ void chDir(fl *fFold){
 }
 
 void cmdKey(){
-    dAsk("Command", fTmp);
+    ask("Command", fTmp);
     if (strcmp(fTmp, ""))
         system(fTmp);
 }
@@ -453,13 +456,11 @@ int main(int argc, char **argv){
     sTmp = (char *) malloc(sizeof(char)*8192);
 
     readConf(&lPart, &rPart, tEditor, term, keys, loc);
-    ubinds = getUserBinds(&numbOfBinds);
+    getUserBinds(&numbOfBinds, &ubinds);
     if (argc == 2)
         strcpy(lPart.f.path, argv[1]);
-    if (!setlocale(LC_CTYPE, loc)){
+    if (!setlocale(LC_ALL, loc))
       fprintf(stderr, "Can't set the locale!\nSome filenames can display wrong.\nCheck ~/.config/sfm/sfm.conf");
-      getch();
-    }
     initscr();
     noecho();
     keypad(stdscr, true);
@@ -494,7 +495,7 @@ int main(int argc, char **argv){
         else if (cmd==keys[0])
             lOrR = !lOrR;
         else if (cmd==keys[1]){
-            dAsk("Are you sure, quit?", fTmp);
+            ask("Are you sure, quit?", fTmp);
             if (fTmp[0]=='y')
                 inCy=0;
             }
@@ -533,13 +534,23 @@ int main(int argc, char **argv){
         else if (cmd==KEY_F(6)){
             saveConf(&lPart, &rPart);
             endwin();
+            mFree((void **)lPart.f.files, lPart.f.numbOfLines);
+            mFree((void **)rPart.f.files, rPart.f.numbOfLines);
+            mFree((void **)ubinds, numbOfBinds);
+            lPart.w.currentLine = 0; rPart.w.currentLine = 0;
+            lPart.w.top = 0; rPart.w.top = 0;
+            lPart.f.numbOfLines = 0; rPart.f.numbOfLines = 0;
+            numbOfBinds = 0;
             readConf(&lPart, &rPart, tEditor, term, keys, loc);
-            ubinds = getUserBinds(&numbOfBinds);
-            if (!setlocale(LC_CTYPE, loc)){
+            getUserBinds(&numbOfBinds, &ubinds);
+            if (!setlocale(LC_ALL, loc))
               fprintf(stderr, "Can't set the locale!\nSome filenames can display wrong.\nCheck ~/.config/sfm/sfm.conf");
-              getch();
-            }
             initscr();
+            noecho();
+            keypad(stdscr, true);
+            fillList(&lPart);
+            fillList(&rPart);
+            inCy=1;
             }
         else if (cmd==KEY_HOME)
             kHome(&tmpCPt->w);
@@ -548,7 +559,7 @@ int main(int argc, char **argv){
         else {
             for(inCy=0;inCy<numbOfBinds;inCy++)
                 if (cmd==ubinds[inCy]->key){
-                    parseCmd(ubinds[inCy]->cmd, tmpCPt, tmpAPt);
+                    parseCmd(tmpCPt, tmpAPt, ubinds[inCy]->cmd);
                     break;
                 }
             inCy = 1;
@@ -557,18 +568,9 @@ int main(int argc, char **argv){
 
     endwin();
     saveConf(&lPart, &rPart);
-    inCy=0;
-    while (inCy<lPart.f.numbOfLines)
-        free(lPart.f.files[inCy++]);
-    free(lPart.f.files);
-    inCy=0;
-    while (inCy<rPart.f.numbOfLines)
-        free(rPart.f.files[inCy++]);
-    inCy=0;
-    while (inCy<numbOfBinds)
-        free(ubinds[inCy++]);
-    free(ubinds);
-    free(rPart.f.files);
+    mFree((void **)lPart.f.files, lPart.f.numbOfLines);
+    mFree((void **)rPart.f.files, rPart.f.numbOfLines);
+    mFree((void **)ubinds, numbOfBinds);
     free(lPart.f.path);
     free(rPart.f.path);
     free(fTmp);

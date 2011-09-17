@@ -1,31 +1,27 @@
-q     - quit                                                    (Y)
-c     - change folder (cd)                                      (Y)
-s     - open in another window same folder                      (Y)
-h     - show/hide hidden files                                  (Y)
-enter - open folder/open file(if specified text editor)/execute (Y)
-u     - parent folder                                           (Y)
-a     - select another window                                   (Y)
-g     - go to entered line                                      (Y)
-i     - info about item                                         (Y)
-k     - console                                                 (Y)
-end   - go to last item                                         (Y)
-home  - go to first item                                        (Y)
-F5    - reload folder                                           (Y)
-F6    - reload resources                                        (Y)
+q     - quit
+c     - change folder
+s     - open in another window same folder
+h     - show/hide hidden files
+enter - open folder/open file(if specified text editor)/execute
+u     - parent folder
+a     - select another window
+g     - go to entered line
+i     - info about item
+k     - console
+end   - go to last item
+home  - go to first item
+F5    - reload folder
+F6    - reload resources
 
-Also u can type "sfm /path/to/smth".                            (Y)
-Save/load setings from .conf                                    (Y)
-Runtime resize                                                  (Y)
+Also u can type "sfm /path/to/smth".
+Save/load setings from .conf.
+Runtime resize.
 
 Syntax of [uBinds]:
 %cf - current folder
 %cF - current file
 %af - another folder
 %UEnter your text here% - get text
-M = mkdir -p '%UName of new folder%'
-C = cp -r '%cf%cF' '%af'
-
-Y - yes
-N - no
-W - developing
-F - in next version (>=0.03a)
+M = mkdir -p '%UName of new folder%' ;
+C = cp -r '%cf%cF' '%af' ;
+Don't miss ';'.
