@@ -67,7 +67,8 @@ int slt(const struct dirent *d){
 void ask(char *i, char *o){
     echo();
     printw("%s: ", i);
-    scanw("%[^\n]", o);
+    if ((scanw("%[^\n]", o))==-1)
+        strcpy(o, "");
     noecho();
 }
 
@@ -355,7 +356,7 @@ void goToLine(part *fPart, int mRow){
 
 void chDir(fl *fFold){
     ask("Name of folder", fTmp);
-    if (!strcmp(fTmp, "")){
+    if (strcmp(fTmp, "")){
         if (fTmp[strlen(fTmp)-1]!='/')
             strcat(fTmp, "/");
         if (fTmp[0]=='/')
@@ -444,7 +445,7 @@ void nfo(part *fPart, int mCol){
 }
 
 int main(int argc, char **argv){
-    int mRow=0, mCol=0, lOrR=0, cmd, inCy=1, keys[15], numbOfBinds=0;         //lOrR = left ot right (selected) //cob = count of binds
+    int mRow=0, mCol=0, lOrR=0, cmd='!', inCy=1, keys[15], numbOfBinds=0;         //lOrR = left ot right (selected) //cob = count of binds
     part lPart, rPart, *tmpCPt, *tmpAPt;
     char tEditor[32], term[64], loc[32];
     bnd **ubinds=NULL;
