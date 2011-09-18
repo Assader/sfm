@@ -8,6 +8,7 @@ a     - select another window
 g     - go to entered line
 i     - info about item
 k     - console
+/     - search
 end   - go to last item
 home  - go to first item
 F5    - reload folder

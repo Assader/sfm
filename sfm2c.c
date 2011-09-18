@@ -18,8 +18,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301, USA.
  *
- * v=0.02b
- * d=2011-06-19
+ * v=0.02c
+ * d=2011-09-17
  *
  */
 
@@ -30,10 +30,11 @@
 #include <dirent.h>
 #include <sys/stat.h>
 #include <locale.h>
+#include <ctype.h>
 #include "iniparser/src/iniparser.c"
 #include "iniparser/src/dictionary.c"
 
-#define ACTIONS 9
+#define ACTIONS 10
 
 typedef struct{
         WINDOW *win;
@@ -142,10 +143,11 @@ void setKeys(FILE *f, const char **actions){
         ch=getch();
         fprintf(f, "%s = %c ;\n", actions[i++], ch);
     }
+    fprintf(f, "[uBinds]\n");
 }
 
 void readConf(part *fPart, part *sPart, char *tEditor, char *term, int *keys, char *loc){
-    const char *actions[ACTIONS] = {"Another window", "Quit", "Hidden mode", "Same folder", "Change folder", "Parent folder", "Go to line", "Info", "Execute command"};
+    const char *actions[ACTIONS] = {"Another window", "Quit", "Hidden mode", "Same folder", "Change folder", "Parent folder", "Go to line", "Info", "Execute command", "Search"};
     int i=0;
     dictionary *ini;
 
@@ -174,15 +176,17 @@ void readConf(part *fPart, part *sPart, char *tEditor, char *term, int *keys, ch
         f = fopen(fTmp, "w");
         if (i=='d')
             fprintf(f,"[Global]\nText editor = gedit ;\nTerminal emulator = xterm ;\nLocale = en_US.UTF-8 ;\n"
-                      "[Binds]\nAnother window = a ;\nQuit = q ;\nHidden mode = h ;\nSame folder = s ;\nChange folder = c ;\n"
-                      "Parent folder = u ;\nGo to line = g ;\nInfo = i ;\nExecute command = k ;\n"
-                      "[uBinds]\n");
+                      "[Binds]\nAnother window = a ;\nQuit = q ;\nHidden mode = h ;\nSame folder = s ;\n"
+                      "Change folder = c ;\nParent folder = u ;\nGo to line = g ;\nInfo = i ;\nExecute command = k ;\n"
+                      "Search = / ;\n[uBinds]\n");
         else
             setKeys(f, actions);
         fclose(f);
         clear();
         printw("Config saved to ~/.config/sfm/sfm.conf\nYou can set user-binds in.\nPress enter");
         getch();
+        strcpy(fTmp, getenv("HOME"));
+        strcat(fTmp, "/.config/sfm/sfm.conf");
         i = 0;
     }
     ini = iniparser_load(fTmp);
@@ -366,10 +370,14 @@ void chDir(fl *fFold){
     }
 }
 
-void cmdKey(){
+void kCmd(part *fPart, part *sPart){
     ask("Command", fTmp);
-    if (strcmp(fTmp, ""))
-        system(fTmp);
+    if (strcmp(fTmp, "")){
+        if (strchr(fTmp, '%'))
+            parseCmd(fPart, sPart, fTmp);
+        else
+            system(fTmp);
+    }
 }
 
 char *pSize(long int s){
@@ -385,7 +393,7 @@ char *pSize(long int s){
     return fTmp;
 }
 
-void gInfo(part *fPart, wnd *fWind, int mCol){
+void getInfo(part *fPart, wnd *fWind, int mCol){
     const short int octarray[9] = {0400, 0200, 0100, 0040, 0020, 0010, 0004, 0002, 0001};
     const char *rwx="rwx";
     int tY=1, i;
@@ -444,9 +452,43 @@ void nfo(part *fPart, int mCol){
     mvprintw(0, mCol-15, "|%d/%d", fPart->w.currentLine+1, fPart->f.numbOfLines);
 }
 
+void process(part *fPart, int mRow, int mCol, int showNfo){
+    wclear(fPart->w.win);
+    box(fPart->w.win, 0, 0);
+    draw(fPart, mRow, mCol);
+    showNfo ? nfo(fPart, mCol) : 0;
+    wrefresh(fPart->w.win);
+}
+
+void kSearch(part *fPart, int mRow, int mCol){
+    int i=0, key;
+    echo();
+    printw("/");
+    while (isprint((key=getch()))){
+            sTmp[i++] = key;
+            sTmp[i] = '\0';
+        key=0;
+        while (key<fPart->f.numbOfLines){
+            if (!strncmp(fPart->f.files[key]->d_name, sTmp, strlen(sTmp))){
+                fPart->w.currentLine = key;
+                setTop(&fPart->w, mRow, 0);
+                process(fPart, mRow, mCol, 1);
+                move(mRow-1, i+1);
+                break;
+            }
+            ++key;
+        }
+    }
+    noecho();
+}
+
 int main(int argc, char **argv){
-    int mRow=0, mCol=0, lOrR=0, cmd='!', inCy=1, keys[15], numbOfBinds=0;         //lOrR = left ot right (selected) //cob = count of binds
-    part lPart, rPart, *tmpCPt, *tmpAPt;
+    int mRow=0, mCol=0,
+        lOrR=0, cmd='!',
+        inCy=1, numbOfBinds=0,
+        keys[12];
+    part lPart, rPart,
+         *tmpCPt, *tmpAPt;
     char tEditor[32], term[64], loc[32];
     bnd **ubinds=NULL;
     lPart.w.currentLine=0; rPart.w.currentLine=0;
@@ -460,8 +502,8 @@ int main(int argc, char **argv){
     getUserBinds(&numbOfBinds, &ubinds);
     if (argc == 2)
         strcpy(lPart.f.path, argv[1]);
-    if (!setlocale(LC_ALL, loc))
-      fprintf(stderr, "Can't set the locale!\nSome filenames can display wrong.\nCheck ~/.config/sfm/sfm.conf");
+    if (!setlocale(LC_CTYPE, loc))
+        fprintf(stderr, "Can't set the locale!\nSome filenames can display wrong.\nCheck ~/.config/sfm/sfm.conf");
     initscr();
     noecho();
     keypad(stdscr, true);
@@ -469,22 +511,15 @@ int main(int argc, char **argv){
     fillList(&rPart);
     while (inCy){
         reSize(&lPart.w, &rPart.w, &mRow, &mCol);
-        wclear(lPart.w.win);
-        wclear(rPart.w.win);
-        box(lPart.w.win, 0, 0);
-        box(rPart.w.win, 0, 0);
         mvchgat(0, 0, -1, A_INVIS, 0, NULL);
         mvchgat(mRow-1, 0, -1, A_INVIS, 0, NULL);
         if ((cmd>='A')&&(cmd<='z'))
             mvprintw(0, mCol-1, "%c", cmd);
         tmpCPt = lOrR ? &rPart : &lPart;
         tmpAPt = lOrR ? &lPart : &rPart;
-        draw(&lPart, mRow, mCol);
-        draw(&rPart, mRow, mCol);
-        nfo(tmpCPt, mCol);
         refresh();
-        wrefresh(lPart.w.win);
-        wrefresh(rPart.w.win);
+        process(tmpCPt, mRow, mCol, 1);
+        process(tmpAPt, mRow, mCol, 0);
         move(mRow-1, 0);
         cmd = getch();
         if (cmd==KEY_UP)
@@ -523,9 +558,11 @@ int main(int argc, char **argv){
         else if (cmd==keys[6])
             goToLine(tmpCPt, mRow);
         else if (cmd==keys[7])
-            gInfo(tmpCPt, &tmpAPt->w, mCol);
+            getInfo(tmpCPt, &tmpAPt->w, mCol);
         else if (cmd==keys[8])
-            cmdKey();
+            kCmd(tmpCPt, tmpAPt);
+        else if (cmd==keys[9])
+            kSearch(tmpCPt, mRow, mCol);
         else if (cmd==KEY_F(5)){
             fillList(&lPart);
             fillList(&rPart);
