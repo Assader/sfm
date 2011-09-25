@@ -8,7 +8,7 @@ a     - select another window
 g     - go to entered line
 i     - info about item
 k     - console
-/     - search
+s     - search
 end   - go to last item
 home  - go to first item
 F5    - reload folder
@@ -26,3 +26,9 @@ Syntax of [uBinds]:
 M = mkdir -p '%UName of new folder%' ;
 C = cp -r '%cf%cF' '%af' ;
 Don't miss ';'.
+
+Syntax of [Filetypes]:
+Types = jpg avi png ;
+jpg = feh ;
+png = feh ;
+avi = mplayer ;

@@ -1,8 +1,8 @@
 PNAME=sfm
-PVER=2c
-FLAGS=-Wall -O2 -lncurses
-${PNAME}: ${PNAME}${PVER}.c
-	gcc ${FLAGS} -o ${PNAME} ${PNAME}${PVER}.c
+PFILE=main
+FLAGS=-Wall -O2 -lncurses -o ${PNAME}
+${PNAME}: ${PFILE}.c
+	gcc ${FLAGS} ${PFILE}.c
 clean:
 	rm -f *.o
 	rm -f ${PNAME}
