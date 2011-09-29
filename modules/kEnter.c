@@ -2,7 +2,7 @@
  * Обрабатывает нажатие Enter.
  * Если текущий элемент - директория, переходит в нее,
  *                        бинарник - выполняет в терминале,
- * иначе ищет в ftypes команду для этого типа файла,
+ * иначе - ищет в ftypes команду для этого типа файла,
  * если там такой нет, пробует открыть текстовым редактором.
  */
 
@@ -12,8 +12,7 @@ void kEnter(part *fPart, char *tEditor, char *term, int mRow, fts **ftypes, int 
     struct stat fStat;
 
     if (fPart->f.numbOfLines){
-        strcpy(fTmp, fPart->f.path);
-        strcat(fTmp, fPart->f.files[fPart->w.currentLine]->d_name);
+        sprintf(fTmp, "%s%s", fPart->f.path, fPart->f.files[fPart->w.currentLine]->d_name);
         stat(fTmp, &fStat);
         if (S_ISDIR(fStat.st_mode)){
             strcat(fPart->f.path, fPart->f.files[fPart->w.currentLine]->d_name);
@@ -30,19 +29,13 @@ void kEnter(part *fPart, char *tEditor, char *term, int mRow, fts **ftypes, int 
         else if (S_ISREG(fStat.st_mode)){
             strcpy(sTmp, tEditor);
             tmp=&fTmp[strlen(fTmp)-1];
-            while (((*tmp)!='.')&&(tmp != &fTmp[0]))
+            while (((*(tmp-1))!='.')&&(tmp != &fTmp[0]))
                 --tmp;
-            ++tmp;
-            while(i<numbOfFTypes){
+            for(;i<numbOfFTypes;i++)
                 if (!strcmp(ftypes[i]->filetype, tmp)){
-                    strcpy(sTmp, ftypes[i]->cmd);
-                    strcat(sTmp, " \'");
-                    strcat(sTmp, fTmp);
-                    strcat(sTmp, "\'");
+                    sprintf(sTmp, "%s \'%s\'", ftypes[i]->cmd, fTmp);
                     break;
                 }
-                ++i;
-            }
             execInBkg(sTmp);
         }
     }

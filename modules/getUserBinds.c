@@ -8,9 +8,9 @@
 void getUserBinds(bnd ***ubinds, int *numbOfBinds, dictionary *ini){
     const char *symbols = "qwertyuiopasdfghjklzxcvbnm";
     *ubinds = (bnd **) malloc(sizeof(bnd *));
-    int i=0;
+    int i;
 
-    while (i<strlen(symbols)){
+    for(i=0;i<strlen(symbols);i++){
         sprintf(fTmp, "ubinds:%c", symbols[i]);
         strcpy(fTmp, iniparser_getstring(ini, fTmp, ""));
         if (fTmp[0]!='\0'){
@@ -21,6 +21,5 @@ void getUserBinds(bnd ***ubinds, int *numbOfBinds, dictionary *ini){
             strcpy((*ubinds)[*numbOfBinds]->cmd, fTmp);
             ++(*numbOfBinds);
         }
-        ++i;
     }
 }

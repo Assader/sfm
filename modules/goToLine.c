@@ -12,5 +12,6 @@ void goToLine(part *fPart, int mRow){
         fPart->w.top = 0;
         fPart->w.currentLine = 0;
     }
-    setTop(&fPart->w, mRow, 0);
+    else
+        setTop(&fPart->w, mRow, 0);
 }

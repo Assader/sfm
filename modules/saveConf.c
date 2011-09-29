@@ -3,8 +3,7 @@
  */
 
 void saveConf(part *fPart, part *sPart){
-    strcpy(fTmp, getenv("HOME"));
-    strcat(fTmp, "/.config/sfm/tmp");
+    sprintf(fTmp, "%s/.config/sfm/tmp", getenv("HOME"));
     FILE *f = fopen(fTmp, "w");
     fprintf(f, "[Main]\nlPath = %s ;\nrPath = %s ;\nlHid = %d ;\nrHid = %d ;\n",
                fPart->f.path, sPart->f.path, fPart->f.showHidden, sPart->f.showHidden);

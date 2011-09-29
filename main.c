@@ -18,8 +18,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
  * MA 02110-1301, USA.
  *
- * v=0.03a_pre-release
- * d=2011-09-17
+ * v=0.03a
+ * d=2011-09-29
  *
  */
 
@@ -41,7 +41,7 @@ int main(int argc, char **argv){
         lOrR=0, cmd='!',
         inCy=1, numbOfBinds=0,
         numbOfFTypes=0,
-        keys[12];
+        keys[ACTIONS];
     part lPart, rPart,
          *tmpCPt, *tmpAPt;
     char tEditor[32], term[64], loc[32];
@@ -57,8 +57,10 @@ int main(int argc, char **argv){
     readConf(&lPart, &rPart, tEditor, term, keys, loc, &ubinds, &numbOfBinds, &ftypes, &numbOfFTypes);
     if (argc == 2)
         strcpy(lPart.f.path, argv[1]);
-    if (!setlocale(LC_CTYPE, loc))
-        fprintf(stderr, "Can't set the locale!\nSome filenames can display wrong.\nCheck ~/.config/sfm/sfm.conf");
+    if (!setlocale(LC_CTYPE, loc)){
+        fprintf(stderr, "===\nCan't set the locale!\nSome filenames can display wrong.\nCheck ~/.config/sfm/sfm.conf\nPress enter\n===\n");
+        getchar();
+    }
     initscr();
     noecho();
     keypad(stdscr, true);
@@ -68,7 +70,7 @@ int main(int argc, char **argv){
         reSize(&lPart.w, &rPart.w, &mRow, &mCol);
         mvchgat(0, 0, -1, A_INVIS, 0, NULL);
         mvchgat(mRow-1, 0, -1, A_INVIS, 0, NULL);
-        if ((cmd>='A')&&(cmd<='z'))
+        if (isalpha(cmd))
             mvprintw(0, mCol-1, "%c", cmd);
         tmpCPt = lOrR ? &rPart : &lPart;
         tmpAPt = lOrR ? &lPart : &rPart;
@@ -101,7 +103,7 @@ int main(int argc, char **argv){
             setTop(&tmpAPt->w, mRow, 1);
             }
         else if (cmd==keys[4]){
-            chDir(&tmpCPt->f);
+            chDir(&tmpCPt->f, mRow);
             fillList(tmpCPt);
             setTop(&tmpCPt->w, mRow, 1);
             }
@@ -145,8 +147,10 @@ int main(int argc, char **argv){
             lPart.f.numbOfLines = 0; rPart.f.numbOfLines = 0;
             numbOfBinds = 0; numbOfFTypes = 0;
             readConf(&lPart, &rPart, tEditor, term, keys, loc, &ubinds, &numbOfBinds, &ftypes, &numbOfFTypes);
-            if (!setlocale(LC_ALL, loc))
-              fprintf(stderr, "Can't set the locale!\nSome filenames can display wrong.\nCheck ~/.config/sfm/sfm.conf");
+            if (!setlocale(LC_CTYPE, loc)){
+                fprintf(stderr, "===\nCan't set the locale!\nSome filenames can display wrong.\nCheck ~/.config/sfm/sfm.conf\nPress enter\n===\n");
+                getchar();
+            }
             initscr();
             noecho();
             keypad(stdscr, true);
@@ -154,8 +158,10 @@ int main(int argc, char **argv){
             fillList(&rPart);
             inCy=1;
             }
+        else if (cmd==KEY_F(1))
+            showCBinds(tmpAPt, mRow, ubinds, numbOfBinds);
         else if (cmd==KEY_HOME)
-            kHome(&tmpCPt->w);
+            setTop(&tmpCPt->w, mRow, 1);
         else if (cmd==KEY_END)
             kEnd(tmpCPt, mRow);
         else if (cmd==KEY_NPAGE)

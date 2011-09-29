@@ -11,16 +11,14 @@ void kSearch(part *fPart, int mRow, int mCol){
     while (isprint((key=getch()))){
             sTmp[i++] = key;
             sTmp[i] = '\0';
-        while (pos<fPart->f.numbOfLines){
-            if (!strncmp(fPart->f.files[pos]->d_name, sTmp, strlen(sTmp))){
+        for(;pos<fPart->f.numbOfLines;pos++)
+            if (!strncmp(fPart->f.files[pos]->d_name, sTmp, i)){
                 fPart->w.currentLine = pos;
                 setTop(&fPart->w, mRow, 0);
                 process(fPart, mRow, mCol, 1);
                 move(mRow-1, i+1);
                 break;
             }
-            ++pos;
-        }
     }
     noecho();
 }

@@ -2,7 +2,7 @@ q     - quit
 c     - change folder
 s     - open in another window same folder
 h     - show/hide hidden files
-enter - open folder/open file(if specified text editor)/execute
+enter - open folder/open file(if specified command)/execute
 u     - parent folder
 a     - select another window
 g     - go to entered line
@@ -11,6 +11,7 @@ k     - console
 s     - search
 end   - go to last item
 home  - go to first item
+F1    - show binds
 F5    - reload folder
 F6    - reload resources
 
@@ -22,9 +23,11 @@ Syntax of [uBinds]:
 %cf - current folder
 %cF - current file
 %af - another folder
+%rc - refresh current folder
+%ra - refresh another folder
 %UEnter your text here% - get text
-M = mkdir -p '%UName of new folder%' ;
-C = cp -r '%cf%cF' '%af' ;
+M = mkdir -p '%UName of new folder%' %rc;
+p = cp -r '%cf%cF' '%af' %ra;
 Don't miss ';'.
 
 Syntax of [Filetypes]:

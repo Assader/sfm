@@ -52,7 +52,7 @@ void readConf(part *fPart, part *sPart, char *tEditor, char *term, int *keys, ch
             setKeys(f, actions);
         fclose(f);
         clear();
-        printw("Config saved to ~/.config/sfm/sfm.conf\nYou can set user-binds in.\nPress enter");
+        printw("Config saved to ~/.config/sfm/sfm.conf\nYou can set user-binds and filetypes in.\nPress any key");
         getch();
         sprintf(fTmp, "%s/.config/sfm/sfm.conf", getenv("HOME"));
         i = 0;

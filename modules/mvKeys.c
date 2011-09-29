@@ -6,10 +6,7 @@ void kUp(wnd *fWind, int numbOfLines, int mRow){
     --fWind->currentLine;
     if (fWind->currentLine<0){
         fWind->currentLine = numbOfLines-1;
-        if (numbOfLines>mRow-4)
-            fWind->top = fWind->currentLine-(mRow-5);
-        else
-            fWind->top = 0;
+        setTop(fWind, mRow, 0);
     }
     if (fWind->currentLine<fWind->top)
         --fWind->top;
@@ -21,21 +18,10 @@ void kUp(wnd *fWind, int numbOfLines, int mRow){
 
 void kDown(wnd *fWind, int numbOfLines, int mRow){
     ++fWind->currentLine;
-    if (fWind->currentLine>numbOfLines-1){
-        fWind->currentLine = 0;
-        fWind->top = 0;
-    }
+    if (fWind->currentLine>numbOfLines-1)
+        setTop(fWind, mRow, 1);
     if (fWind->currentLine>fWind->top+(mRow-5))
         ++fWind->top;
-}
-
-/*
- * Обнуляет currentLine.
- */
-
-void kHome(wnd *fWind){
-    fWind->currentLine = 0;
-    fWind->top = 0;
 }
 
 /*
@@ -57,7 +43,7 @@ void kPUp(wnd *fWind, int mRow){
         setTop(fWind, mRow, 0);
         }
     else
-        kHome(fWind);
+        setTop(fWind, mRow, 1);
 }
 
 /*

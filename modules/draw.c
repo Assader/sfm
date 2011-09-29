@@ -9,24 +9,22 @@
  */
 
 void draw(part *fPart, int mRow, int mCol){
-    int tY=1;
+    int tY=0;
     struct stat fStat;
 
-    wmove(fPart->w.win, 1, 1);
-    while ((tY<mRow-3)&&(tY-1<fPart->f.numbOfLines)){
-        wprintw(fPart->w.win, "%.*s", mCol/2-3, fPart->f.files[fPart->w.top + tY-1]->d_name);
-        sprintf(fTmp, "%s%s", fPart->f.path, fPart->f.files[fPart->w.top + tY-1]->d_name);
+    while ((tY<mRow-4)&&(tY<fPart->f.numbOfLines)){
+        mvwprintw(fPart->w.win, tY+1, 1, "%.*s", mCol/2-3, fPart->f.files[fPart->w.top + tY]->d_name);
+        sprintf(fTmp, "%s%s", fPart->f.path, fPart->f.files[fPart->w.top + tY++]->d_name);
         stat(fTmp, &fStat);
         if (S_ISDIR(fStat.st_mode))
             wprintw(fPart->w.win, "/");
-        if ((fStat.st_mode & S_IXUSR)&&(!S_ISDIR(fStat.st_mode)))
+        else if (fStat.st_mode & S_IXUSR)
             wprintw(fPart->w.win, "*");
-        if (S_ISLNK(fStat.st_mode))
+        else if (S_ISLNK(fStat.st_mode))
             wprintw(fPart->w.win, ">");
-        if (S_ISCHR(fStat.st_mode))
+        else if (S_ISCHR(fStat.st_mode))
             wprintw(fPart->w.win, "@");
-        if (S_ISBLK(fStat.st_mode))
+        else if (S_ISBLK(fStat.st_mode))
             wprintw(fPart->w.win, "#");
-        wmove(fPart->w.win, ++tY, 1);
     }
 }

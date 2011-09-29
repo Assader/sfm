@@ -22,3 +22,4 @@
 #include "nfo.c"
 #include "process.c"
 #include "kSearch.c"
+#include "showCBinds.c"

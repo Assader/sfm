@@ -12,5 +12,6 @@ char *parseSize(long int s){
         ++i;
     }
     sprintf(fTmp, "%.2lf %s", sz, sizes[i]);
+
     return fTmp;
 }
