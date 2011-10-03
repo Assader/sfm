@@ -7,6 +7,7 @@
  */
 
 void fillList(part *fPart){
-    fPart->f.numbOfLines ? aFree((void **)fPart->f.files, fPart->f.numbOfLines) : 0;
+    if (fPart->f.numbOfLines)
+        aFree((void **)fPart->f.files, fPart->f.numbOfLines);
     fPart->f.numbOfLines = scandir(fPart->f.path, &fPart->f.files, (fPart->f.showHidden)?0:slt, alphasort);
 }

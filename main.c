@@ -56,7 +56,8 @@ int main(int argc, char **argv){
 
     readConf(&lPart, &rPart, tEditor, term, keys, loc, &ubinds, &numbOfBinds, &ftypes, &numbOfFTypes);
     if (argc == 2)
-        strcpy(lPart.f.path, argv[1]);
+        if (isValidPath(argv[1]))
+            strcpy(lPart.f.path, argv[1]);
     if (!setlocale(LC_CTYPE, loc)){
         fprintf(stderr, "===\nCan't set the locale!\nSome filenames can display wrong.\nCheck ~/.config/sfm/sfm.conf\nPress enter\n===\n");
         getchar();
@@ -136,10 +137,14 @@ int main(int argc, char **argv){
                 free(ubinds[numbOfBinds]);
             }
             free(ubinds);
-            while(numbOfFTypes--){
-                free(ftypes[numbOfFTypes]->filetype);
-                free(ftypes[numbOfFTypes]->cmd);
-                free(ftypes[numbOfFTypes]);
+            inCy=0;
+            while(inCy<numbOfFTypes){
+                free(ftypes[inCy]->filetype);
+                if (ftypes[inCy]->lvl){
+                    free(ftypes[inCy]->cmd);
+                }
+                ftypes[inCy]->cmd=NULL;
+                free(ftypes[inCy++]);
             }
             free(ftypes);
             lPart.w.currentLine = 0; rPart.w.currentLine = 0;
@@ -187,10 +192,14 @@ int main(int argc, char **argv){
         free(ubinds[numbOfBinds]);
     }
     free(ubinds);
-    while(numbOfFTypes--){
-        free(ftypes[numbOfFTypes]->filetype);
-        free(ftypes[numbOfFTypes]->cmd);
-        free(ftypes[numbOfFTypes]);
+    inCy=0;
+    while(inCy<numbOfFTypes){
+        free(ftypes[inCy]->filetype);
+        if (ftypes[inCy]->lvl){
+            free(ftypes[inCy]->cmd);
+        }
+        ftypes[inCy]->cmd=NULL;
+        free(ftypes[inCy++]);
     }
     free(ftypes);
     free(lPart.f.path);

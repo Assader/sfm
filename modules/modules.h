@@ -1,6 +1,7 @@
 #include "globalItems.c"
 #include "slt.c"
 #include "ask.c"
+#include "isValidPath.c"
 #include "aFree.c"
 #include "fillList.c"
 #include "parseCmd.c"

@@ -5,8 +5,6 @@
  */
 
 void chDir(fl *fFold, int mRow){
-    struct stat fStat;
-
     ask("Name of folder", fTmp);
     if (strcmp(fTmp, "")){
         if (fTmp[strlen(fTmp)-1]!='/')
@@ -15,8 +13,7 @@ void chDir(fl *fFold, int mRow){
             strcpy(sTmp, fTmp);
         else
             sprintf(sTmp, "%s%s", fFold->path, fTmp);
-        stat(sTmp, &fStat);
-        if (S_ISDIR(fStat.st_mode))
+        if (isValidPath(sTmp))
             strcpy(fFold->path, sTmp);
         else {
             mvchgat(mRow-1, 0, -1, A_INVIS, 0, NULL);

@@ -24,12 +24,14 @@ void getFileTypes(fts ***ftypes, int *numbOfFTypes, dictionary *ini){
         for(i=0;i<(*numbOfFTypes);i++)
             if (!strcmp((*ftypes)[i]->cmd, sTmp)){
                 (*ftypes)[*numbOfFTypes]->cmd = (*ftypes)[i]->cmd;
+                (*ftypes)[*numbOfFTypes]->lvl = 0;
                 i=0;
                 break;
             }
         if (i||(!(*numbOfFTypes))){
             (*ftypes)[*numbOfFTypes]->cmd = (char *) malloc(sizeof(sTmp)+1);
             strcpy((*ftypes)[*numbOfFTypes]->cmd, sTmp);
+            (*ftypes)[*numbOfFTypes]->lvl = 1;
         }
         ++(*numbOfFTypes);
         tmp = strtok(NULL, " ");    

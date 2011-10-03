@@ -24,4 +24,5 @@ typedef struct{
 typedef struct{
     char *filetype;
     char *cmd;
+    int lvl;
 } fts;

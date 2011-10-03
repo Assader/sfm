@@ -9,6 +9,7 @@
 void getInfo(part *fPart, wnd *fWind, int mCol, int mRow){
     const short int right[9] = {0400, 0200, 0100, 0040, 0020, 0010, 0004, 0002, 0001};
     const char *rwx="rwx";
+    FILE *f;
     int tY=1, i;
     struct stat fStat;
 
@@ -31,7 +32,7 @@ void getInfo(part *fPart, wnd *fWind, int mCol, int mRow){
     mvwprintw(fWind->win, tY++, 1, "Owner: ");
     sprintf(fTmp, "getent passwd %d > /tmp/sfm-Owner", fStat.st_uid);
     system(fTmp);
-    FILE *f = fopen("/tmp/sfm-Owner", "r");
+    f = fopen("/tmp/sfm-Owner", "r");
     fscanf(f, "%[^:]", fTmp);
     fclose(f);
     wprintw(fWind->win, "%s", fTmp);

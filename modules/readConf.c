@@ -20,14 +20,15 @@ void readConf(part *fPart, part *sPart, char *tEditor, char *term, int *keys, ch
     const char *actions[ACTIONS] = {"Another window", "Quit", "Hidden mode", "Same folder", "Change folder", "Parent folder",
                                     "Go to line", "Info", "Execute command", "Search"};
     int i=0;
+    FILE *f;
     dictionary *ini;
 
     initscr();
     sprintf(fTmp, "%s/.config/sfm/tmp", getenv("HOME"));
-    FILE *f = fopen(fTmp, "r");
+    f = fopen(fTmp, "r");
     if (!f){
         system("mkdir -p ~/.config/sfm/");
-        f=fopen(fTmp, "w");
+        f = fopen(fTmp, "w");
         fprintf(f, "[Main]\nlPath = / ;\nrPath = / ;\nlHid = 0 ;\nrHid = 0 ;\n");
     }
     fclose(f);
@@ -50,13 +51,13 @@ void readConf(part *fPart, part *sPart, char *tEditor, char *term, int *keys, ch
                       "Search = s ;\n[uBinds]\n\n[Filetypes\n]");
         else
             setKeys(f, actions);
-        fclose(f);
         clear();
         printw("Config saved to ~/.config/sfm/sfm.conf\nYou can set user-binds and filetypes in.\nPress any key");
         getch();
         sprintf(fTmp, "%s/.config/sfm/sfm.conf", getenv("HOME"));
         i = 0;
     }
+    fclose(f);
     ini = iniparser_load(fTmp);
     strcpy(tEditor, iniparser_getstring(ini, "global:text editor", "gedit"));
     strcpy(term, iniparser_getstring(ini, "global:terminal emulator", "xterm"));
