@@ -28,6 +28,7 @@ void kEnter(part *fPart, char *tEditor, char *term, int mRow, fts **ftypes, int 
         }
         else if (S_ISREG(fStat.st_mode)){
             strcpy(sTmp, tEditor);
+            sprintf(sTmp, "%s \'%s\'", tEditor, fTmp);
             tmp=&fTmp[strlen(fTmp)-1];
             while (((*(tmp-1))!='.')&&(tmp != &fTmp[0]))
                 --tmp;
