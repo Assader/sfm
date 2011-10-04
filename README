@@ -1,6 +1,6 @@
 q     - quit
 c     - change folder
-s     - open in another window same folder
+s     - open in current window same folder
 h     - show/hide hidden files
 enter - open folder/open file(if specified command)/execute
 u     - parent folder
@@ -8,7 +8,7 @@ a     - select another window
 g     - go to entered line
 i     - info about item
 k     - console
-s     - search
+/     - search
 end   - go to last item
 home  - go to first item
 F1    - show binds

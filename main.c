@@ -99,9 +99,9 @@ int main(int argc, char **argv){
             setTop(&tmpCPt->w, mRow, 1);
             }
         else if (cmd==keys[3]){
-            strcpy(tmpAPt->f.path, tmpCPt->f.path);
-            fillList(tmpAPt);
-            setTop(&tmpAPt->w, mRow, 1);
+            strcpy(tmpCPt->f.path, tmpAPt->f.path);
+            fillList(tmpCPt);
+            setTop(&tmpCPt->w, mRow, 1);
             }
         else if (cmd==keys[4]){
             chDir(&tmpCPt->f, mRow);

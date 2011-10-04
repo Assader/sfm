@@ -20,14 +20,7 @@ void kEnter(part *fPart, char *tEditor, char *term, int mRow, fts **ftypes, int 
             fillList(fPart);
             setTop(&fPart->w, mRow, 1);
         }
-        else if (fStat.st_mode & S_IXUSR){
-            strcpy(sTmp, term);
-            strcat(sTmp, " ");
-            strcat(sTmp, fTmp);
-            execInBkg(sTmp);
-        }
         else if (S_ISREG(fStat.st_mode)){
-            strcpy(sTmp, tEditor);
             sprintf(sTmp, "%s \'%s\'", tEditor, fTmp);
             tmp=&fTmp[strlen(fTmp)-1];
             while (((*(tmp-1))!='.')&&(tmp != &fTmp[0]))
@@ -37,6 +30,12 @@ void kEnter(part *fPart, char *tEditor, char *term, int mRow, fts **ftypes, int 
                     sprintf(sTmp, "%s \'%s\'", ftypes[i]->cmd, fTmp);
                     break;
                 }
+            execInBkg(sTmp);
+        }
+        else if (fStat.st_mode & S_IXUSR){
+            strcpy(sTmp, term);
+            strcat(sTmp, " ");
+            strcat(sTmp, fTmp);
             execInBkg(sTmp);
         }
     }
