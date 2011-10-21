@@ -58,7 +58,7 @@ int main(int argc, char **argv){
     if (argc == 2)
         if (isValidPath(argv[1]))
             strcpy(lPart.f.path, argv[1]);
-    if (!setlocale(LC_CTYPE, loc)){
+    if (!setlocale(LC_ALL, loc)){
         fprintf(stderr, "===\nCan't set the locale!\nSome filenames can display wrong.\nCheck ~/.config/sfm/sfm.conf\nPress enter\n===\n");
         getchar();
     }
@@ -152,7 +152,7 @@ int main(int argc, char **argv){
             lPart.f.numbOfLines = 0; rPart.f.numbOfLines = 0;
             numbOfBinds = 0; numbOfFTypes = 0;
             readConf(&lPart, &rPart, tEditor, term, keys, loc, &ubinds, &numbOfBinds, &ftypes, &numbOfFTypes);
-            if (!setlocale(LC_CTYPE, loc)){
+            if (!setlocale(LC_ALL, loc)){
                 fprintf(stderr, "===\nCan't set the locale!\nSome filenames can display wrong.\nCheck ~/.config/sfm/sfm.conf\nPress enter\n===\n");
                 getchar();
             }

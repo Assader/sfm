@@ -21,22 +21,20 @@ void kEnter(part *fPart, char *tEditor, char *term, int mRow, fts **ftypes, int 
             setTop(&fPart->w, mRow, 1);
         }
         else if (S_ISREG(fStat.st_mode)){
-            sprintf(sTmp, "%s \'%s\'", tEditor, fTmp);
-            tmp=&fTmp[strlen(fTmp)-1];
-            while (((*(tmp-1))!='.')&&(tmp != &fTmp[0]))
-                --tmp;
-            for(;i<numbOfFTypes;i++)
-                if (!strcmp(ftypes[i]->filetype, tmp)){
-                    sprintf(sTmp, "%s \'%s\'", ftypes[i]->cmd, fTmp);
-                    break;
-                }
-            execInBkg(sTmp);
-        }
-        else if (fStat.st_mode & S_IXUSR){
-            strcpy(sTmp, term);
-            strcat(sTmp, " ");
-            strcat(sTmp, fTmp);
-            execInBkg(sTmp);
+            if (fStat.st_mode & S_IXUSR)
+                sprintf(sTmp, "%s \'%s\'", term, fTmp);
+            else{
+                sprintf(sTmp, "%s \'%s\'", tEditor, fTmp);
+                tmp=&fTmp[strlen(fTmp)-1];
+                while (((*(tmp-1))!='.')&&(tmp != &fTmp[0]))
+                    --tmp;
+                for(;i<numbOfFTypes;i++)
+                    if (!strcmp(ftypes[i]->filetype, tmp)){
+                        sprintf(sTmp, "%s \'%s\'", ftypes[i]->cmd, fTmp);
+                        break;
+                    }
+            }
+                execInBkg(sTmp);
         }
     }
 }
