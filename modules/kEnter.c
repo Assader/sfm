@@ -34,7 +34,7 @@ void kEnter(part *fPart, char *tEditor, char *term, int mRow, fts **ftypes, int 
                         break;
                     }
             }
-                execInBkg(sTmp);
+            execInBkg(sTmp);
         }
     }
 }

@@ -84,10 +84,14 @@ int main(int argc, char **argv){
             kUp(&tmpCPt->w, tmpCPt->f.numbOfLines, mRow);
         else if (cmd==KEY_DOWN)
             kDown(&tmpCPt->w, tmpCPt->f.numbOfLines, mRow);
-        else if ((cmd==KEY_ENTER)||(cmd=='\n'))
+        else if ((cmd==KEY_ENTER)||(cmd=='\n')){
             kEnter(tmpCPt, tEditor, term, mRow, ftypes, numbOfFTypes);
-        else if (cmd==keys[0])
+            chdir(tmpCPt->f.path);
+            }
+        else if (cmd==keys[0]){
             lOrR = !lOrR;
+            chdir(tmpCPt->f.path);
+            }
         else if (cmd==keys[1]){
             ask("Are you sure, quit?", fTmp);
             if (fTmp[0]=='y')
@@ -102,16 +106,19 @@ int main(int argc, char **argv){
             strcpy(tmpCPt->f.path, tmpAPt->f.path);
             fillList(tmpCPt);
             setTop(&tmpCPt->w, mRow, 1);
+            chdir(tmpCPt->f.path);
             }
         else if (cmd==keys[4]){
             chDir(&tmpCPt->f, mRow);
             fillList(tmpCPt);
             setTop(&tmpCPt->w, mRow, 1);
+            chdir(tmpCPt->f.path);
             }
         else if (cmd==keys[5]){
             kPFld(&tmpCPt->f);
             fillList(tmpCPt);
             setTop(&tmpCPt->w, mRow, 1);
+            chdir(tmpCPt->f.path);
             }
         else if (cmd==keys[6])
             goToLine(tmpCPt, mRow);

@@ -10,11 +10,12 @@ void getUserBinds(bnd ***ubinds, int *numbOfBinds, dictionary *ini){
     int i;
     *ubinds = (bnd **) malloc(sizeof(bnd *));
 
-    for(i=0;i<strlen(symbols);i++){
+    for(i=0;i<26;i++){
         sprintf(fTmp, "ubinds:%c", symbols[i]);
         strcpy(fTmp, iniparser_getstring(ini, fTmp, ""));
         if (fTmp[0]!='\0'){
-            ((*numbOfBinds)>0) ? *ubinds = (bnd **) realloc(*ubinds, sizeof(bnd *)*((*numbOfBinds)+1)) : 0;
+            if ((*numbOfBinds)>0)
+                *ubinds = (bnd **) realloc(*ubinds, sizeof(bnd *)*((*numbOfBinds)+1));
             (*ubinds)[*numbOfBinds] = (bnd *) malloc(sizeof(bnd));
             (*ubinds)[*numbOfBinds]->key = symbols[i];
             (*ubinds)[*numbOfBinds]->cmd = (char *) malloc((size_t)strlen(fTmp)+1);

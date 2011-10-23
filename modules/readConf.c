@@ -25,8 +25,7 @@ void readConf(part *fPart, part *sPart, char *tEditor, char *term, int *keys, ch
 
     initscr();
     sprintf(fTmp, "%s/.config/sfm/tmp", getenv("HOME"));
-    f = fopen(fTmp, "r");
-    if (!f){
+    if (!(f = fopen(fTmp, "r"))){
         system("mkdir -p ~/.config/sfm/");
         f = fopen(fTmp, "w");
         fprintf(f, "[Main]\nlPath = / ;\nrPath = / ;\nlHid = 0 ;\nrHid = 0 ;\n");
@@ -39,8 +38,7 @@ void readConf(part *fPart, part *sPart, char *tEditor, char *term, int *keys, ch
     sPart->f.showHidden = iniparser_getint(ini, "main:rhid", 0);
     iniparser_freedict(ini);
     sprintf(fTmp, "%s/.config/sfm/sfm.conf", getenv("HOME"));
-    f = fopen(fTmp, "r");
-    if (!f){
+    if (!(f = fopen(fTmp, "r"))){
         printw("Main .conf file not found. (C)onfigure now or use (d)efault?");
         i = getch();
         f = fopen(fTmp, "w");
