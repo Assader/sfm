@@ -9,9 +9,9 @@
 void getInfo(part *fPart, wnd *fWind, int mCol, int mRow){
     const short int right[9] = {0400, 0200, 0100, 0040, 0020, 0010, 0004, 0002, 0001};
     const char *rwx="rwx";
-    FILE *f;
     int tY=1, i;
     struct stat fStat;
+    struct passwd *un;
 
     wclear(fWind->win);
     box(fWind->win, 0, 0);
@@ -29,13 +29,8 @@ void getInfo(part *fPart, wnd *fWind, int mCol, int mRow){
         ((i+1)%3==0) ? wprintw(fWind->win, " ") : 0;
     }
     wprintw(fWind->win, "(%o)", (fStat.st_mode & S_IRWXU)+(fStat.st_mode & S_IRWXG)+(fStat.st_mode & S_IRWXO));
-    mvwprintw(fWind->win, tY++, 1, "Owner: ");
-    sprintf(fTmp, "getent passwd %d > /tmp/sfm-Owner", fStat.st_uid);
-    system(fTmp);
-    f = fopen("/tmp/sfm-Owner", "r");
-    fscanf(f, "%[^:]", fTmp);
-    fclose(f);
-    wprintw(fWind->win, "%s", fTmp);
+    un = getpwuid(fStat.st_uid);
+    mvwprintw(fWind->win, tY++, 1, "Owner: %s", un->pw_name);
     move(mRow-1, 0);
     wrefresh(fWind->win);
     getch();

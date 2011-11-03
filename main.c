@@ -31,6 +31,7 @@
 #include <sys/stat.h>
 #include <locale.h>
 #include <ctype.h>
+#include <pwd.h>
 #include "iniparser/src/iniparser.c"
 #include "iniparser/src/dictionary.c"
 #include "modules/modules.h"

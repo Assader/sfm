@@ -46,7 +46,7 @@ void readConf(part *fPart, part *sPart, char *tEditor, char *term, int *keys, ch
             fprintf(f,"[Global]\nText editor = gedit ;\nTerminal emulator = xterm ;\nLocale = en_US.UTF-8 ;\n"
                       "[Binds]\nAnother window = a ;\nQuit = q ;\nHidden mode = h ;\nSame folder = s ;\n"
                       "Change folder = c ;\nParent folder = u ;\nGo to line = g ;\nInfo = i ;\nExecute command = k ;\n"
-                      "Search = / ;\n[uBinds]\n\n[Filetypes\n]");
+                      "Search = / ;\n[uBinds]\n\n[Filetypes]\nTypes = ;\n\n");
         else
             setKeys(f, actions);
         clear();

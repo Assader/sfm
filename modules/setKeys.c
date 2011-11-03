@@ -24,5 +24,5 @@ void setKeys(FILE *f, const char **actions){
         ch=getch();
         fprintf(f, "%s = %c ;\n", actions[i++], ch);
     }
-    fprintf(f, "[uBinds]\n\n[Filetypes]\n");
+    fprintf(f, "[uBinds]\n\n[Filetypes]\nTypes = ;\n\n");
 }
