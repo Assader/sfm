@@ -5,7 +5,7 @@ LIBS=-lncurses
 OBJS=dictionary.o iniparser.o
 FLAGS=-O2 -Wall -pedantic -o ${PNAME}
 OFLAGS=-O3 -Wall -pedantic -march=native -mtune=native -o ${PNAME}
-${PNAME}: ${PFILE}.c inip
+all: ${PFILE}.c inip
 	${CC} ${FLAGS} ${PFILE}.c ${OBJS} ${LIBS}
 optimised: ${PFILE}.c inip
 	${CC} ${OFLAGS} ${PFILE}.c ${OBJS} ${LIBS}
