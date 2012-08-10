@@ -1,11 +1,17 @@
+CC=gcc
 PNAME=sfm
 PFILE=main
-FLAGS=-Wall -pedantic -O2 -lncurses -o ${PNAME}
-OFLAGS=-Wall -pedantic -O3 -g -lncurses -march=native -mtune=native -o ${PNAME}
-${PNAME}: ${PFILE}.c
-	gcc ${FLAGS} ${PFILE}.c
-optimised: ${PFILE}.c
-	gcc ${OFLAGS} main.c 
+LIBS=-lncurses
+OBJS=dictionary.o iniparser.o
+FLAGS=-O2 -Wall -pedantic -o ${PNAME}
+OFLAGS=-O3 -Wall -pedantic -march=native -mtune=native -o ${PNAME}
+${PNAME}: ${PFILE}.c inip
+	${CC} ${FLAGS} ${PFILE}.c ${OBJS} ${LIBS}
+optimised: ${PFILE}.c inip
+	${CC} ${OFLAGS} ${PFILE}.c ${OBJS} ${LIBS}
+inip:
+	${CC} -c -O2 -Wall -ansi -pedantic ./iniparser/src/dictionary.c
+	${CC} -c -O2 -Wall -ansi -pedantic ./iniparser/src/iniparser.c
 clean:
 	rm -f *.o
 	rm -f ${PNAME}

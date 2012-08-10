@@ -1,4 +1,4 @@
- #
+#
 # iniparser Makefile
 #
 
@@ -44,8 +44,8 @@ libiniparser.a:	$(OBJS)
 	@($(RANLIB) libiniparser.a)
 
 libiniparser.so:	$(OBJS)
-	@$(SHLD) $(LDSHFLAGS) -o $@ $(OBJS) $(LDFLAGS) \
-		-Wl,-soname=`basename $@`
+	@$(SHLD) $(LDSHFLAGS) -o $@.0 $(OBJS) $(LDFLAGS) \
+		-Wl,-soname=`basename $@`.0
 
 clean:
 	$(RM) $(OBJS)
